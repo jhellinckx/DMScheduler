@@ -4,6 +4,7 @@
 struct Task {
   unsigned o, t, d, c;
 
+  Task();
   Task(unsigned, unsigned, unsigned, unsigned);
 };
 

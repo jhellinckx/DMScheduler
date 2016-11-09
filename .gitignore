@@ -27,3 +27,7 @@
 *.exe
 *.out
 *.app
+
+main
+!main.cpp
+.DS_Store
