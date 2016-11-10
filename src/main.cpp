@@ -19,38 +19,39 @@ std::ostream &operator<<(std::ostream &out, const std::vector<T> &vec) {
 std::vector<Task> read_tasks(std::ifstream in) {
   std::string task_string;
   std::vector<Task> tasks;
-  Task t;
+  Task task;
   while (!in.eof()) {
-    in >> t.o >> t.t >> t.d >> t.c;
-    t.u = ((double)t.c) / t.t;
-    tasks.push_back(t);
+    in >> task.o >> task.t >> task.d >> task.c;
+    task.u = ((double)task.c) / task.t;
+    tasks.push_back(task);
   }
   return tasks;
 }
 
-void sort_by_u(std::vector<Task> &tasks) {
+void decreasing_utilization(std::vector<Task> &tasks) {
   std::sort(tasks.begin(), tasks.end(),
             [](Task x, Task y) { return x.u >= y.u; });
 }
 
-std::vector<Processor> partition(unsigned procs,
+std::vector<std::vector<Task>> partition_tasks(std::size_t partitions,
                                  const std::vector<Task> &tasks) {
-  std::vector<Processor> partitioning(procs);
-  for (const Task &t : tasks) {
-    std::size_t proc(0);
-    double min_diff(2);
-    bool placed(false);
-    for (std::size_t i(0); i < tasks.size(); ++i) {
-      if (partitioning[i].u() + t.u <= 1.0 &&
-          fabs(t.u - (1.0 - partitioning[i].u())) < min_diff) {
-        min_diff = fabs(t.u - (1.0 - partitioning[i].u()));
-        std::cout << i << " " << min_diff << std::endl;
+  std::vector<std::vector<Task>> partitioning(partitions);
+  std::vector<double> utilization(partitions, 0.0);
+  for (const Task &task : tasks) {
+    std::size_t partition = 0;
+    double min_diff = 1.0;
+    bool placed = false;
+    for (std::size_t i = 0; i < partitions; ++i) {
+      if (utilization[i] + task.u <= 1.0 &&
+          fabs(task.u - (1.0 - utilization[i])) < min_diff) {
+        min_diff = fabs(task.u - (1.0 - utilization[i]));
         placed = true;
-        proc = i;
+        partition = i;
       }
     }
     if (placed) {
-      partitioning[proc].add_task(t);
+      partitioning[partition].push_back(task);
+      utilization[partition] += task.u;
     } else {
       std::cout << "No Partition here" << std::endl;
       break;
@@ -59,10 +60,21 @@ std::vector<Processor> partition(unsigned procs,
   return partitioning;
 }
 
+void print_partitions(const std::vector<std::vector<Task>>& partitions){
+	for(const std::vector<Task>& tasks : partitions){
+		double acc_u = 0.0;
+		std::cout << "Partition : ";
+		for(const Task& task : tasks){
+			std::cout << task << " / ";
+			acc_u += task.u;
+		}
+		std::cout << "u = " << acc_u << std::endl;
+	}
+}
+
 int main() {
   std::vector<Task> tasks = read_tasks(std::ifstream("../test/example"));
-  sort_by_u(tasks);
-  std::cout << tasks << std::endl;
-  std::cout << partition(4, tasks) << std::endl;
+  decreasing_utilization(tasks);
+  print_partitions(partition_tasks(4, tasks));
   return 0;
 }
