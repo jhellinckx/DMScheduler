@@ -2,10 +2,10 @@
 #define __JOB_HPP
 
 struct Job{
-	unsigned t_begin, d, c;
+	unsigned t_begin, d, d_tot, c;
 
 	Job(const Task& task, unsigned t);
-	
+
 };
 
 

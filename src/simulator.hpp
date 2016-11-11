@@ -59,8 +59,13 @@ public:
 
 class DMSimulator : public Simulator{
 
+public:
+	DMSimulator(const std::vector<Task>& tasks) : Simulator(tasks) {}
+
 	std::size_t next_job() {
-		
+		return std::min_element(_jobs.begin(), _jobs.end(), [](const Job& first, Job& second){
+			return first.d_tot < second.d_tot;
+		}) - _jobs.begin();
 	}
 };
 
