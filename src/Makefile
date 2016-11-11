@@ -2,7 +2,7 @@ CXXFLAGS = -std=c++11 -g -O0 -Wpedantic -Wall -Wextra -Winit-self -Winline -Wcon
 TARGET = main
 LDFLAGS = -lm
 
-${TARGET}: task.o processor.o main.o
+${TARGET}: task.o main.o
 	${CXX} -o $@ $^ ${LDFLAGS} && ./${TARGET}
 
 .PHONY: clean mrproper
