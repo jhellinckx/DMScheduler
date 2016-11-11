@@ -6,6 +6,7 @@
 struct Task {
   unsigned o, t, d, c;
   double u;
+  unsigned id;
 
   Task();
   Task(unsigned, unsigned, unsigned, unsigned);

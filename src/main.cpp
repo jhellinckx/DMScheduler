@@ -19,9 +19,11 @@ std::vector<Task> read_tasks(std::ifstream in) {
   std::string task_string;
   std::vector<Task> tasks;
   Task task;
+  unsigned id = 1;
   while (!in.eof()) {
     in >> task.o >> task.t >> task.d >> task.c;
     task.u = ((double)task.c) / task.t;
+    task.id = id++;
     tasks.push_back(task);
   }
   return tasks;

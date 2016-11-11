@@ -9,6 +9,7 @@ class Simulator{
 protected:
 	std::vector<Task> _tasks;
 	std::vector<Job> _jobs;
+	std::vector<Job> _completed;
 
 public:
 	Simulator(const std::vector<Task>& tasks) : _tasks(tasks), _jobs() {}
@@ -17,7 +18,7 @@ public:
 		for(unsigned t = 0; t < t_max; ++t){
 			generate_jobs(t);
 			if(_jobs.size() > 0){
-				schedule(next_job());
+				schedule(next_job(), t);
 			}
 			if(check_deadlines() == false){
 				std::cout << "not schedulable" << std::endl;
@@ -34,18 +35,18 @@ public:
 		}
 	}
 
-	void schedule(std::size_t job){
-		_jobs[job].c -= 1;
-		if(_jobs[job].c == 0){
+	void schedule(std::size_t job, unsigned t){
+		_jobs[job].execute(t);
+		if(_jobs[job].completed()){
+			_completed.push_back(_jobs[job]);
 			_jobs.erase(_jobs.begin() + job);
 		}
 	}
 
 	bool check_deadlines(){
 		bool respected = true;
-		for(Job& job : _jobs){
-			job.d -= 1;
-			if(job.d == 0){
+		for(const Job& job : _jobs){
+			if(job.missed()){
 				respected = false;
 			}
 		}
@@ -64,7 +65,7 @@ public:
 
 	std::size_t next_job() {
 		return std::min_element(_jobs.begin(), _jobs.end(), [](const Job& first, Job& second){
-			return first.d_tot < second.d_tot;
+			return first.d_rel < second.d_rel;
 		}) - _jobs.begin();
 	}
 };
