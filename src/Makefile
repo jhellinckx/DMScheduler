@@ -19,4 +19,4 @@ clean:
 	rm -f *.o
 
 mrproper: clean
-	rm -f main
+	rm -f main taskGenerator

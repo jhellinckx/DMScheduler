@@ -19,7 +19,6 @@ private:
 
 public:
   bool utilisation_check() const;
-  bool ub_check() const;
   double u() const;
 };
 
