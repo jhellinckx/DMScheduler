@@ -26,8 +26,6 @@ int main(int argc, char* argv[]){
     }
   }
 
-  std::cout << u_goal << ' ' << n << std::endl;
-
   Generator g(u_goal, n);
   std::ofstream out;
   out.open(out_file);

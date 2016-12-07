@@ -1,4 +1,5 @@
 #include "job.hpp"
+#include <iostream>
 
 Job::Job(const Task& task, unsigned t) : 
 	d(t + task.d), d_rel(task.d), c(task.c), task_id(task.id), executions() {}
@@ -15,3 +16,13 @@ bool Job::completed() const {
 bool Job::missed(unsigned t) const {
 	return !completed() && t >= d;
 }
+
+std::ostream& operator<<(std::ostream& out, const Job& job){
+	out << "ID(" << job.task_id << ")" << " D(" << job.d << ")" << " D_rel(" << job.d_rel << ")" << " C(" << job.c << ")" << std::endl;
+	out << "Execs : ";
+	for(const unsigned& exec: job.executions) { out << exec << " "; }
+	return out;
+}
+
+
+

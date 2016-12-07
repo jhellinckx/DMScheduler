@@ -18,5 +18,6 @@ struct Job{
 
 };
 
+std::ostream& operator<<(std::ostream& out, const Job& job);
 
 #endif
