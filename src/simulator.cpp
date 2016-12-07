@@ -45,7 +45,7 @@ template<typename PriorityComp>
 void FTPSimulator<PriorityComp>::incoming_jobs(unsigned t) {
 	for(const Task& task : _tasks){
 		if(((int)t - (int)task.o) % (int)task.t == 0){
-			std::cout << "Incoming job at time " << t << " : " << Job(task, t) << std::endl;
+			//std::cout << "Incoming job at time " << t << " : " << Job(task, t) << std::endl;
 			add_job(Job(task, t));
 		}
 	}
@@ -138,7 +138,8 @@ bool DMPriority::operator() (const Job& a, const Job& b) const {
 }
 
 PDMSimulator::PDMSimulator(const std::vector<Task>& tasks, unsigned partitions) : 
-	FTPSimulator<DMPriority>(tasks), _running_partitioning(partitions), 
+	FTPSimulator<DMPriority>(tasks), _partitioning(partitions),
+	_running_partitioning(partitions), 
 	_idle_partitioning(partitions), _ready_partitioning(partitions),
 	_current_partitioning(partitions), _completed_partitioning(partitions),
 	_t_reached_partitioning(partitions) {
@@ -189,6 +190,7 @@ std::string PDMSimulator::stringify_partitions() {
 void PDMSimulator::run(unsigned t_max){
 	for(unsigned i = 0; i < (unsigned)_partitioning.size(); ++i){
 		_tasks = _partitioning[i];
+
 		FTPSimulator::run(t_max);
 		save_partition(i);
 		clear();
