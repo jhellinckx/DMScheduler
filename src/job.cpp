@@ -13,5 +13,5 @@ bool Job::completed() const {
 }
 
 bool Job::missed(unsigned t) const {
-	return t >= d;
+	return !completed() && t >= d;
 }

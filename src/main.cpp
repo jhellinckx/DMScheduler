@@ -1,4 +1,3 @@
-#include "task.hpp"
 #include <algorithm>
 #include <cmath>
 #include <fstream>
@@ -6,6 +5,10 @@
 #include <iostream>
 #include <sstream>
 #include <vector>
+
+#include "task.hpp"
+#include "simulator.hpp"
+
 
 template <typename T>
 std::ostream &operator<<(std::ostream &out, const std::vector<T> &vec) {
@@ -20,8 +23,9 @@ std::vector<Task> read_tasks(std::ifstream in) {
   std::vector<Task> tasks;
   Task task;
   unsigned id = 1;
-  while (!in.eof()) {
+  while (in.peek() != EOF) {
     in >> task.o >> task.t >> task.d >> task.c;
+	in.get(); // Consume \n
     task.u = ((double)task.c) / task.t;
     task.id = id++;
     tasks.push_back(task);
@@ -77,5 +81,6 @@ int main() {
   std::vector<Task> tasks = read_tasks(std::ifstream("../test/example"));
   decreasing_utilization(tasks);
   print_partitions(partition_tasks(4, tasks));
+  PDMSimulator partitioned_dm(tasks, 4);
   return 0;
 }

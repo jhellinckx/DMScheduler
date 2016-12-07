@@ -1,73 +1,62 @@
 #ifndef __SIMULATOR_HPP
 #define __SIMULATOR_HPP
 
+#define DEADLINES_OK true
+#define DEADLINES_NOT_OK false
+
 #include <vector>
 #include "task.hpp"
 #include "job.hpp"
+#include <algorithm>
+#include <queue>
 
-class Simulator{
+
+template<typename PriorityComp>
+class FTPSimulator{
 protected:
+	PriorityComp _priority;
+	Job _running_job;
+	bool _idle;
 	std::vector<Task> _tasks;
-	std::vector<Job> _jobs;
-	std::vector<Job> _completed;
+	std::priority_queue<Job, std::vector<Job>, PriorityComp> _ready_jobs;
+	std::vector<Job> _current_jobs;
+	std::vector<Job> _completed_jobs;
+
+	FTPSimulator(const std::vector<Task>& tasks);
+	void set_tasks_id();
+	void execute_job(unsigned t);
+	void add_job(const Job& job);
+	void incoming_jobs(unsigned t);
+	void schedule();
+	void preempt();
+	bool check_deadlines(unsigned t);
 
 public:
-	Simulator(const std::vector<Task>& tasks) : _tasks(tasks), _jobs() {}
+	virtual void run(unsigned t_max);
 
-	void run(unsigned t_max){
-		for(unsigned t = 0; t < t_max; ++t){
-			generate_jobs(t);
-			if(_jobs.size() > 0){
-				schedule(next_job(), t);
-			}
-			if(check_deadlines() == false){
-				std::cout << "not schedulable" << std::endl;
-				break;
-			}
-		}
-	}
-
-	void generate_jobs(unsigned t) {
-		for(const Task& task : _tasks){
-			if(((int)t - (int)task.o) % (int)task.t == 0){
-				_jobs.push_back(Job(task, t)):
-			}
-		}
-	}
-
-	void schedule(std::size_t job, unsigned t){
-		_jobs[job].execute(t);
-		if(_jobs[job].completed()){
-			_completed.push_back(_jobs[job]);
-			_jobs.erase(_jobs.begin() + job);
-		}
-	}
-
-	bool check_deadlines(){
-		bool respected = true;
-		for(const Job& job : _jobs){
-			if(job.missed()){
-				respected = false;
-			}
-		}
-		return respected;
-	}
-
-	virtual std::size_t next_job() = 0;
-
+	virtual ~FTPSimulator(){}
 };
 
+class DMPriority{
+public:
+	bool operator() (const Job& a, const Job& b) const;
+};
 
-class DMSimulator : public Simulator{
+class PDMSimulator : public FTPSimulator<DMPriority>{
+	std::vector<std::vector<Task>> _partitioning;
+
+	void partition_tasks(unsigned partitions);
 
 public:
-	DMSimulator(const std::vector<Task>& tasks) : Simulator(tasks) {}
+	PDMSimulator(const std::vector<Task>& tasks, unsigned partitions);
 
-	std::size_t next_job() {
-		return std::min_element(_jobs.begin(), _jobs.end(), [](const Job& first, Job& second){
-			return first.d_rel < second.d_rel;
-		}) - _jobs.begin();
-	}
+	virtual ~PDMSimulator() {}
+};
+
+class GDMSimulator : public FTPSimulator<DMPriority>{
+
+	virtual ~GDMSimulator() {}
+
 };
 
 #endif

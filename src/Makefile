@@ -1,9 +1,13 @@
 CXXFLAGS = -std=c++11 -g -O0 -Wpedantic -Wall -Wextra -Winit-self -Winline -Wconversion -Weffc++ -Wctor-dtor-privacy -Woverloaded-virtual -Wconversion -Wsign-promo
-TARGET = main
 LDFLAGS = -lm
 
-${TARGET}: task.o main.o
-	${CXX} -o $@ $^ ${LDFLAGS} && ./${TARGET}
+SRC = $(wildcard *.cpp)
+OBJ = $(patsubst %.cpp, %.o, ${SRC})
+
+all: main
+
+main: ${OBJ}
+	${CXX} -o $@ $^ ${LDFLAGS}
 
 .PHONY: clean mrproper
 
@@ -11,4 +15,4 @@ clean:
 	rm -f *.o
 
 mrproper: clean
-	rm -f ${TARGET}
+	rm -f main
