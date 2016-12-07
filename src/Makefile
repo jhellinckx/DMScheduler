@@ -3,10 +3,14 @@ LDFLAGS = -lm
 
 SRC = $(wildcard *.cpp)
 OBJ = $(patsubst %.cpp, %.o, ${SRC})
+OBJ_TG = task.o generator.o task_generator.o
 
-all: main
+all: main taskGenerator
 
 main: ${OBJ}
+	${CXX} -o $@ $^ ${LDFLAGS}
+
+taskGenerator: ${OBJ_TG}
 	${CXX} -o $@ $^ ${LDFLAGS}
 
 .PHONY: clean mrproper
