@@ -9,7 +9,8 @@
 #include "job.hpp"
 #include <algorithm>
 #include <queue>
-
+#include <string>
+#include <sstream>
 
 template<typename PriorityComp>
 class FTPSimulator{
@@ -49,6 +50,9 @@ class PDMSimulator : public FTPSimulator<DMPriority>{
 
 public:
 	PDMSimulator(const std::vector<Task>& tasks, unsigned partitions);
+
+	std::string stringify_partitions() const;
+	std::string stringify_simulation() const;
 
 	virtual ~PDMSimulator() {}
 };

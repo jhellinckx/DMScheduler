@@ -3,6 +3,7 @@
 #include <queue>
 #include <iostream>
 #include <cmath>
+#include <string>
 
 #include "task.hpp"
 #include "job.hpp"
@@ -10,7 +11,7 @@
 
 template<typename PriorityComp>
 void FTPSimulator<PriorityComp>::set_tasks_id() {
-	for(std::size_t i = 0; i < _tasks.size(); ++i){ _tasks[i].id = i; }
+	for(std::size_t i = 0; i < _tasks.size(); ++i){ _tasks[i].id = (unsigned) i; }
 }
 
 template<typename PriorityComp>
@@ -85,9 +86,15 @@ bool DMPriority::operator() (const Job& a, const Job& b) const {
 	return (a.d == b.d) ? a.task_id < b.task_id : a.d < b.d;
 }
 
-PDMSimulator::PDMSimulator(const std::vector<Task>& tasks, unsigned partitions) : FTPSimulator<DMPriority>(tasks) {}
+PDMSimulator::PDMSimulator(const std::vector<Task>& tasks, unsigned partitions) : 
+	FTPSimulator<DMPriority>(tasks), _partitioning(partitions) {
+		partition_tasks(partitions);
+	}
 
 void PDMSimulator::partition_tasks(unsigned partitions){
+	// Sort by decreasing utilization
+	std::sort(_tasks.begin(), _tasks.end(),
+            [](Task x, Task y) { return x.u >= y.u; });
 	std::vector<double> utilization(partitions, 0.0);
 	for (const Task &task : _tasks) {
 		std::size_t partition = 0;
@@ -111,6 +118,25 @@ void PDMSimulator::partition_tasks(unsigned partitions){
 	}
 }
 
+std::string PDMSimulator::stringify_partitions() const {
+	std::stringstream ss;
+	for(const std::vector<Task>& tasks : _partitioning){
+		double acc_u = 0.0;
+		ss << "Partition : ";
+		for(const Task& task : tasks){
+			ss << task << " / ";
+			acc_u += task.u;
+		}
+		ss << "u = " << acc_u << std::endl;
+	}
+	return ss.str();
+}
+
+std::string PDMSimulator::stringify_simulation() const {
+	std::stringstream ss;
+
+	return ss.str();
+}
 
 
 
