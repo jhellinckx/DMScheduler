@@ -8,9 +8,11 @@
 #include "task.hpp"
 #include "job.hpp"
 #include "simulator.hpp"
+#include "utils.hpp"
 
 #define DEADLINES_OK true
 #define DEADLINES_NOT_OK false
+#define IDLE_EXEC -1
 
 template<typename PriorityComp>
 void FTPSimulator<PriorityComp>::set_tasks_id() {
@@ -21,9 +23,13 @@ template<typename PriorityComp>
 void FTPSimulator<PriorityComp>::execute_job(unsigned t){
 	if(! _idle){
 		_running_job.execute(t);
+		_executions.push_back((int)_running_job.task_id);
 		if(_running_job.completed()){
 			terminate_running_job();
 		}
+	}
+	else{
+		_executions.push_back(IDLE_EXEC);
 	}
 }
 
@@ -81,13 +87,13 @@ bool FTPSimulator<PriorityComp>::check_deadlines(unsigned t){
 template<typename PriorityComp>
 FTPSimulator<PriorityComp>::FTPSimulator(const std::vector<Task>& tasks) : 
 	_priority(), _running_job(), _idle(true), _tasks(tasks), _ready_jobs(), 
-	_current_jobs(), _completed_jobs(), _t_reached(0) {
+	_current_jobs(), _completed_jobs(), _t_reached(0), _executions() {
 		set_tasks_id();
 	}
 
 template<typename PriorityComp>
-void FTPSimulator<PriorityComp>::run(unsigned t_max){
-	for(unsigned t = 0; t <= t_max; ++t){
+void FTPSimulator<PriorityComp>::run(){
+	for(unsigned t = 0; t <= feasibility_interval(); ++t){
 		incoming_jobs(t);
 		schedule();
 		execute_job(t);
@@ -106,6 +112,7 @@ void FTPSimulator<PriorityComp>::clear(){
 	_ready_jobs = std::priority_queue<Job, std::vector<Job>, PriorityComp>();
 	_current_jobs = std::vector<Job>();
 	_completed_jobs = std::vector<Job>();
+	_executions = std::vector<int>();
 }
 
 template<typename PriorityComp>
@@ -129,6 +136,8 @@ std::string FTPSimulator<PriorityComp>::stringify_simulation() {
 	for(const Job& job : _completed_jobs){
 		ss << job << std::endl;
 	}
+	ss << "Processor executions : " << std::endl;
+	ss << _executions << std::endl;
 	return ss.str();
 }
 
@@ -142,7 +151,7 @@ PDMSimulator::PDMSimulator(const std::vector<Task>& tasks, unsigned partitions) 
 	_running_partitioning(partitions), 
 	_idle_partitioning(partitions), _ready_partitioning(partitions),
 	_current_partitioning(partitions), _completed_partitioning(partitions),
-	_t_reached_partitioning(partitions) {
+	_t_reached_partitioning(partitions), _executions_partitioning(partitions) {
 		partition_tasks(partitions);
 	}
 
@@ -187,11 +196,10 @@ std::string PDMSimulator::stringify_partitions() {
 	return ss.str();
 }
 
-void PDMSimulator::run(unsigned t_max){
+void PDMSimulator::run(){
 	for(unsigned i = 0; i < (unsigned)_partitioning.size(); ++i){
 		_tasks = _partitioning[i];
-
-		FTPSimulator::run(t_max);
+		FTPSimulator::run();
 		save_partition(i);
 		clear();
 	}
@@ -204,6 +212,7 @@ void PDMSimulator::save_partition(unsigned partition){
 	_current_partitioning[partition] = _current_jobs;
 	_completed_partitioning[partition] = _completed_jobs;
 	_t_reached_partitioning[partition] = _t_reached;
+	_executions_partitioning[partition] = _executions;
 }
 
 void PDMSimulator::set_to_partition(unsigned partition){
@@ -214,6 +223,7 @@ void PDMSimulator::set_to_partition(unsigned partition){
 	_current_jobs = _current_partitioning[partition];
 	_completed_jobs = _completed_partitioning[partition];
 	_t_reached = _t_reached_partitioning[partition];
+	_executions = _executions_partitioning[partition];
 }
 
 std::string PDMSimulator::stringify_simulation() {
@@ -222,6 +232,7 @@ std::string PDMSimulator::stringify_simulation() {
 		ss << "Simulation for partition " << i + 1 << " : " << std::endl;
 		set_to_partition(i);
 		ss << FTPSimulator::stringify_simulation();
+		ss << std::endl; 
 	}
 	return ss.str();
 }

@@ -8,15 +8,7 @@
 
 #include "task.hpp"
 #include "simulator.hpp"
-
-
-template <typename T>
-std::ostream &operator<<(std::ostream &out, const std::vector<T> &vec) {
-  for (T t : vec) {
-    out << t << std::endl;
-  }
-  return out;
-}
+#include "utils.hpp"
 
 std::vector<Task> read_tasks(std::ifstream in) {
   std::string task_string;
@@ -37,7 +29,7 @@ int main() {
   std::vector<Task> tasks = read_tasks(std::ifstream("../test/example"));
   PDMSimulator pdm(tasks, 2);
   std::cout << pdm.stringify_partitions() << std::endl;
-  pdm.run(pdm.feasibility_interval());
+  pdm.run();
   std::cout << pdm.stringify_simulation() << std::endl;
   return 0;
 }

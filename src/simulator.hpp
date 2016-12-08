@@ -21,6 +21,7 @@ protected:
 	std::vector<Job> _current_jobs;
 	std::vector<Job> _completed_jobs;
 	unsigned _t_reached;
+	std::vector<int> _executions;
 
 	FTPSimulator(const std::vector<Task>& tasks);
 	void set_tasks_id();
@@ -33,7 +34,7 @@ protected:
 	bool check_deadlines(unsigned t);
 
 public:
-	virtual void run(unsigned t_max);
+	virtual void run();
 	virtual void clear();
 	
 	virtual std::string stringify_simulation();
@@ -65,6 +66,7 @@ class PDMSimulator : public FTPSimulator<DMPriority>{
 	std::vector<std::vector<Job>> _current_partitioning;
 	std::vector<std::vector<Job>> _completed_partitioning;
 	std::vector<unsigned> _t_reached_partitioning;
+	std::vector<std::vector<int>> _executions_partitioning;
 	
 
 	void partition_tasks(unsigned partitions);
@@ -72,7 +74,7 @@ class PDMSimulator : public FTPSimulator<DMPriority>{
 public:
 	PDMSimulator(const std::vector<Task>& tasks, unsigned partitions);
 
-	virtual void run(unsigned t_max);
+	virtual void run();
 	void save_partition(unsigned partition);
 	void set_to_partition(unsigned partition);
 
