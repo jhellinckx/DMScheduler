@@ -14,6 +14,7 @@ template<typename PriorityComp>
 class FTPSimulator{
 protected:
 	PriorityComp _priority;
+	bool _schedulable;
 	Job _running_job;
 	bool _idle;
 	std::vector<Task> _tasks;
@@ -60,6 +61,7 @@ public:
 class PDMSimulator : public FTPSimulator<DMPriority>{
 	std::vector<std::vector<Task>> _partitioning;
 
+	std::vector<bool> _schedulable_partitioning;
 	std::vector<Job> _running_partitioning;
 	std::vector<bool> _idle_partitioning;
 	std::vector<std::priority_queue<Job, std::vector<Job>, DMPriority>> _ready_partitioning;

@@ -86,7 +86,7 @@ bool FTPSimulator<PriorityComp>::check_deadlines(unsigned t){
 
 template<typename PriorityComp>
 FTPSimulator<PriorityComp>::FTPSimulator(const std::vector<Task>& tasks) : 
-	_priority(), _running_job(), _idle(true), _tasks(tasks), _ready_jobs(), 
+	_priority(), _schedulable(true), _running_job(), _idle(true), _tasks(tasks), _ready_jobs(), 
 	_current_jobs(), _completed_jobs(), _t_reached(0), _executions() {
 		set_tasks_id();
 	}
@@ -99,39 +99,42 @@ void FTPSimulator<PriorityComp>::run(){
 		execute_job(t);
 		if(check_deadlines(t) == DEADLINES_NOT_OK){
 			_t_reached = t;
-			break;
+			_schedulable = false;
+			return;
 		}
 	}
 }
 
 template<typename PriorityComp>
 void FTPSimulator<PriorityComp>::clear(){
+	_schedulable = true;
 	_running_job = Job();
 	_idle = true;
 	_tasks = std::vector<Task>();
 	_ready_jobs = std::priority_queue<Job, std::vector<Job>, PriorityComp>();
 	_current_jobs = std::vector<Job>();
 	_completed_jobs = std::vector<Job>();
+	_t_reached = 0;
 	_executions = std::vector<int>();
 }
 
 template<typename PriorityComp>
 std::string FTPSimulator<PriorityComp>::stringify_simulation() {
 	std::stringstream ss;
-	if(!_current_jobs.empty()){
-		ss 	<< "Scheduling failed at time " << _t_reached << "." << std::endl
-			<< "Job running : ";
-			if(_idle){ ss << "None"; } else { ss <<  _running_job; }
-			ss 	<< std::endl
-				<< "Jobs ready when deadline not respected : " << std::endl;
-		while(!_ready_jobs.empty()){
-			ss << _ready_jobs.top() << std::endl;
-			_ready_jobs.pop();
-		}		
-	}
-	else{
+	if(_schedulable){
 		ss << "Scheduling successful." << std::endl;
 	}
+	else{
+		ss 	<< "Scheduling failed at time " << _t_reached << "." << std::endl;
+	}	
+	ss << "Job running : ";
+	if(_idle){ ss << "None"; } else { ss <<  _running_job; }
+	ss 	<< std::endl
+		<< "Jobs ready : " << std::endl;
+	while(!_ready_jobs.empty()){
+		ss << _ready_jobs.top() << std::endl;
+		_ready_jobs.pop();
+	}		
 	ss << "Completed Jobs : " << std::endl;
 	for(const Job& job : _completed_jobs){
 		ss << job << std::endl;
@@ -148,7 +151,7 @@ bool DMPriority::operator() (const Job& a, const Job& b) const {
 
 PDMSimulator::PDMSimulator(const std::vector<Task>& tasks, unsigned partitions) : 
 	FTPSimulator<DMPriority>(tasks), _partitioning(partitions),
-	_running_partitioning(partitions), 
+	_schedulable_partitioning(partitions), _running_partitioning(partitions), 
 	_idle_partitioning(partitions), _ready_partitioning(partitions),
 	_current_partitioning(partitions), _completed_partitioning(partitions),
 	_t_reached_partitioning(partitions), _executions_partitioning(partitions) {
@@ -213,10 +216,12 @@ void PDMSimulator::save_partition(unsigned partition){
 	_completed_partitioning[partition] = _completed_jobs;
 	_t_reached_partitioning[partition] = _t_reached;
 	_executions_partitioning[partition] = _executions;
+	_schedulable_partitioning[partition] = _schedulable;
 }
 
 void PDMSimulator::set_to_partition(unsigned partition){
 	_tasks = _partitioning[partition];
+	_schedulable = _schedulable_partitioning[partition];
 	_running_job = _running_partitioning[partition];
 	_idle = _idle_partitioning[partition];
 	_ready_jobs = _ready_partitioning[partition];
