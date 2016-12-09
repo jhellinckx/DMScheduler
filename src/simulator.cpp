@@ -85,7 +85,7 @@ FTPSimulator<PriorityComp>::FTPSimulator(const std::vector<Task>& tasks, std::si
 
 template<typename PriorityComp>
 void FTPSimulator<PriorityComp>::run(){
-	for(unsigned t = 0; t < feasibility_interval(); ++t){
+	for(unsigned t = 0; t <= feasibility_interval(); ++t){
 		incoming_jobs(t);
 		schedule();
 		for(std::size_t p = 0; p < _num_procs; ++p){ execute_job(t, p); }
