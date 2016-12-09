@@ -11,7 +11,6 @@ GEN_MAIN = task_generator.o
 MAIN_OBJ = $(filter-out ${GEN_MAIN}, ${ALL_OBJ})
 
 all: main taskGenerator
-	echo "LOL"
 
 main: ${MAIN_OBJ}
 	${CXX} -o $@ $^ ${LDFLAGS}
