@@ -31,5 +31,6 @@ int main() {
   std::cout << pdm.stringify_partitions() << std::endl;
   pdm.run();
   std::cout << pdm.stringify_simulation() << std::endl;
+  pdm.prettify_simulation("schedule.png");
   return 0;
 }

@@ -82,6 +82,7 @@ public:
 
 	std::string stringify_partitions();
 	std::string stringify_simulation();
+	void prettify_simulation(const std::string& filename);
 
 	virtual ~PDMSimulator() {}
 };

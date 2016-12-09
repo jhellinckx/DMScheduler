@@ -4,6 +4,10 @@
 #include <iostream>
 #include <cmath>
 #include <string>
+#include <cstdlib>
+#include <cctype>
+#include <unistd.h>
+#include <sstream>
 
 #include "task.hpp"
 #include "job.hpp"
@@ -13,6 +17,7 @@
 #define DEADLINES_OK true
 #define DEADLINES_NOT_OK false
 #define IDLE_EXEC -1
+#define PYTHON_PRETTIFIER_FILENAME "prettify_schedule.py"
 
 template<typename PriorityComp>
 void FTPSimulator<PriorityComp>::set_tasks_id() {
@@ -144,7 +149,6 @@ std::string FTPSimulator<PriorityComp>::stringify_simulation() {
 	return ss.str();
 }
 
-
 bool DMPriority::operator() (const Job& a, const Job& b) const {
 	return (a.d_rel == b.d_rel) ? a.task_id > b.task_id : a.d_rel > b.d_rel;
 }
@@ -241,6 +245,36 @@ std::string PDMSimulator::stringify_simulation() {
 	}
 	return ss.str();
 }
+
+void PDMSimulator::prettify_simulation(const std::string& filename){
+	std::stringstream ss;
+	ss << "python " << PYTHON_PRETTIFIER_FILENAME << " " << filename << " ";
+	ss << "\"[";
+	for(std::size_t i = 0; i < _executions_partitioning.size(); ++i){
+		ss << "[";
+		for(std::size_t j = 0; j < _executions_partitioning[i].size(); ++j){
+			ss << _executions_partitioning[i][j];
+			if(j < _executions_partitioning[i].size() - 1){ ss << ","; }
+		}
+		ss << "]";
+		if(i < _executions_partitioning.size() - 1){ ss << ","; }
+	}
+	ss << "]\"";
+	pid_t pid = fork();
+    if(pid < 0){
+        throw std::runtime_error("Failed to execute visual output command");
+    }
+    else if (pid == 0){
+        if(system(NULL)){
+            system(ss.str().c_str());
+            _Exit(EXIT_SUCCESS);
+        }
+        else{
+            _Exit(EXIT_FAILURE);
+        }
+    }
+}
+
 
 
 
