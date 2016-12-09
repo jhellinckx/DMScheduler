@@ -15,24 +15,28 @@ class FTPSimulator{
 protected:
 	PriorityComp _priority;
 	bool _schedulable;
-	Job _running_job;
-	bool _idle;
+	std::size_t _num_procs;
+	std::size_t _num_queues;
+	std::vector<Job> _running_job;
+	std::vector<bool> _idle;
 	std::vector<Task> _tasks;
-	std::priority_queue<Job, std::vector<Job>, PriorityComp> _ready_jobs;
+	std::vector<std::priority_queue<Job, std::vector<Job>, PriorityComp>> _ready_jobs;
 	std::vector<Job> _current_jobs;
 	std::vector<Job> _completed_jobs;
 	unsigned _t_reached;
-	std::vector<int> _executions;
+	std::vector<std::vector<int>> _executions;
 
 	FTPSimulator(const std::vector<Task>& tasks);
 	void set_tasks_id();
-	void execute_job(unsigned t);
-	void add_job(const Job& job);
-	void terminate_running_job();
+	void execute_job(unsigned t, std::size_t p);
+	void terminate_running_job(std::size_t p);
 	void incoming_jobs(unsigned t);
-	void schedule();
-	void preempt();
+	void add_job(const Job& job, std::size_t q);
+	void preempt(std::size_t p, std::size_t q);
 	bool check_deadlines(unsigned t);
+
+	virtual std::size_t job_queue(const Job& job) = 0;
+	virtual void schedule() = 0;
 
 public:
 	virtual void run();

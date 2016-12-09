@@ -25,41 +25,41 @@ void FTPSimulator<PriorityComp>::set_tasks_id() {
 }
 
 template<typename PriorityComp>
-void FTPSimulator<PriorityComp>::execute_job(unsigned t){
-	if(! _idle){
-		_running_job.execute(t);
-		_executions.push_back((int)_running_job.task_id);
-		if(_running_job.completed()){
-			terminate_running_job();
+void FTPSimulator<PriorityComp>::execute_job(unsigned t, std::size_t p){
+	if(! _idle[p]){
+		_running_job[p].execute(t);
+		_executions[p].push_back((int)_running_job.task_id);
+		if(_running_job[p].completed()){
+			terminate_running_job(p);
 		}
 	}
 	else{
-		_executions.push_back(IDLE_EXEC);
+		_executions[p].push_back(IDLE_EXEC);
 	}
 }
 
 template<typename PriorityComp>
-void FTPSimulator<PriorityComp>::add_job(const Job& job){
-	_current_jobs.push_back(job);
-	_ready_jobs.push(job);
-}
-
-template<typename PriorityComp>
-void FTPSimulator<PriorityComp>::terminate_running_job(){
-	_completed_jobs.push_back(_running_job);
+void FTPSimulator<PriorityComp>::terminate_running_job(std::size_t p){
+	_completed_jobs.push_back(_running_job[p]);
 	_current_jobs.erase(std::remove_if(_current_jobs.begin(), _current_jobs.end(), 
-		[&](const Job& job){ return job.task_id == _running_job.task_id; }), _current_jobs.end());
-	_idle = true;
+		[&](const Job& job){ return job.task_id == _running_job[p].task_id; }), _current_jobs.end());
+	_idle[p] = true;
 }
 
 template<typename PriorityComp>
 void FTPSimulator<PriorityComp>::incoming_jobs(unsigned t) {
 	for(const Task& task : _tasks){
 		if(((int)t - (int)task.o) % (int)task.t == 0){
-			//std::cout << "Incoming job at time " << t << " : " << Job(task, t) << std::endl;
-			add_job(Job(task, t));
+			Job job = Job(task, t):
+			add_job(job, job_queue(job));
 		}
 	}
+}
+
+template<typename PriorityComp>
+void FTPSimulator<PriorityComp>::add_job(const Job& job, std::size_t q){
+        _current_jobs.push_back(job);
+        _ready_jobs[q].push(job);
 }
 
 template<typename PriorityComp>
@@ -77,10 +77,10 @@ void FTPSimulator<PriorityComp>::schedule(){
 }
 
 template<typename PriorityComp>
-void FTPSimulator<PriorityComp>::preempt(){
-	_ready_jobs.push(_running_job);
-	_running_job = _ready_jobs.top();
-	_ready_jobs.pop();
+void FTPSimulator<PriorityComp>::preempt(std::size_t p, std::size_t q){
+	_ready_jobs[q].push(_running_job[p]);
+	_running_job[p] = _ready_jobs[q].top();
+	_ready_jobs[q].pop();
 }
 
 template<typename PriorityComp>
@@ -90,22 +90,23 @@ bool FTPSimulator<PriorityComp>::check_deadlines(unsigned t){
 }
 
 template<typename PriorityComp>
-FTPSimulator<PriorityComp>::FTPSimulator(const std::vector<Task>& tasks) : 
-	_priority(), _schedulable(true), _running_job(), _idle(true), _tasks(tasks), _ready_jobs(), 
-	_current_jobs(), _completed_jobs(), _t_reached(0), _executions() {
+FTPSimulator<PriorityComp>::FTPSimulator(const std::vector<Task>& tasks, std::size_t num_procs, std::size_t num_queues) : 
+	_priority(), _schedulable(true), _num_procs(num_procs), _num_queues(num_queues), 
+	_running_job(num_procs), _idle(num_procs, true), _tasks(tasks), _ready_jobs(num_queues), 
+	_current_jobs(), _completed_jobs(), _t_reached(0), _executions(num_procs) {
 		set_tasks_id();
 	}
 
 template<typename PriorityComp>
 void FTPSimulator<PriorityComp>::run(){
-	for(unsigned t = 0; t <= feasibility_interval(); ++t){
+	for(unsigned t = 0; t < feasibility_interval(); ++t){
 		incoming_jobs(t);
 		schedule();
-		execute_job(t);
+		for(std::size_t p = 0; p < num_procs; ++p){ execute_job(t, p); }
 		if(check_deadlines(t) == DEADLINES_NOT_OK){
 			_t_reached = t;
 			_schedulable = false;
-			return;
+			break;
 		}
 	}
 }
