@@ -73,7 +73,14 @@ public:
 };
 
 class GDMSimulator : public FTPSimulator<DMPriority>{
-	
+
+protected:
+	unsigned job_queue(const Job& job);
+	void schedule();
+
+public:
+	GDMSimulator(const std::vector<Task>& tasks, unsigned procs);
+
 	virtual ~GDMSimulator() {}
 
 };

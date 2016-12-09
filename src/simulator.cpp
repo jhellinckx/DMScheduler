@@ -18,6 +18,8 @@
 #define DEADLINES_NOT_OK false
 #define IDLE_EXEC -1
 #define PYTHON_PRETTIFIER_FILENAME "prettify_schedule.py"
+#define SHARED_QUEUE 0
+
 
 template<typename PriorityComp>
 void FTPSimulator<PriorityComp>::set_tasks_id() {
@@ -111,14 +113,17 @@ std::string FTPSimulator<PriorityComp>::stringify_simulation() {
 		ss << "Job running : ";
 		if(_idle[p]){ ss << "None"; } else { ss <<  _running_job[p]; }
 		ss 	<< std::endl
-			<< "Jobs ready : " << std::endl;
-		while(!_ready_jobs[p].empty()){
-			ss << _ready_jobs[p].top() << std::endl;
-			_ready_jobs[p].pop();
-		}		
-		ss << "Processor executions : " << std::endl;
-		ss << _executions[p] << std::endl;	
+			<< "Processor executions : " << std::endl
+			<< _executions[p] << std::endl;	
 	}
+	for(std::size_t q = 0; q < _num_queues; ++q){
+		ss << "Jobs ready for queue " << q + 1 << " : " << std::endl;
+		while(!_ready_jobs[q].empty()){
+			ss << _ready_jobs[q].top() << std::endl;
+			_ready_jobs[q].pop();
+		}	
+	}
+	
 	ss << "Completed Jobs : " << std::endl;
 	for(const Job& job : _completed_jobs){
 		ss << job << std::endl;
@@ -249,7 +254,35 @@ std::string PDMSimulator::stringify_partitions() {
 }
 
 
+GDMSimulator::GDMSimulator(const std::vector<Task>& tasks, unsigned procs) : 
+	FTPSimulator<DMPriority>(tasks, procs, 1) {
 
+	}
+
+unsigned GDMSimulator::job_queue(const Job& job) {
+	return SHARED_QUEUE;
+}
+
+void GDMSimulator::schedule(){
+	for(std::size_t p = 0; p < _num_procs; ++p){
+		if(_idle[p] && ! _ready_jobs[SHARED_QUEUE].empty()){
+			_running_job[p] = _ready_jobs[SHARED_QUEUE].top();
+			_ready_jobs[SHARED_QUEUE].pop();
+			_idle[p] = false;
+		}	
+	}
+	if(! _ready_jobs[SHARED_QUEUE].empty()){
+		bool unassigned_higher_priority;
+		do{
+			unassigned_higher_priority = false;
+			std::size_t lowest_priority_proc = (std::size_t) (std::min_element(_running_job.begin(), _running_job.end(), _priority) - _running_job.begin());
+			if(_priority(_running_job[lowest_priority_proc], _ready_jobs[SHARED_QUEUE].top())){
+				unassigned_higher_priority = true;
+				preempt(lowest_priority_proc, SHARED_QUEUE);
+			}
+		} while(unassigned_higher_priority && ! _ready_jobs[SHARED_QUEUE].empty());	
+	}
+}
 
 
 
