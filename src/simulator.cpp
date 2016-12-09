@@ -16,7 +16,7 @@
 
 template<typename PriorityComp>
 void FTPSimulator<PriorityComp>::set_tasks_id() {
-	for(std::size_t i = 0; i < _tasks.size(); ++i){ _tasks[i].id = (unsigned) i; }
+	for(std::size_t i = 0; i < _tasks.size(); ++i){ _tasks[i].id = (unsigned) i + 1; }
 }
 
 template<typename PriorityComp>
