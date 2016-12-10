@@ -9,13 +9,13 @@
 #include <random>
 
 #define UNI_UPPER_LIMIT 100
-#define UNI_LOWER_LIMIT 10
 #define O_UPPER_LIMIT 100
 #define O_LOWER_LIMIT 0
 #define PRECISION 1000.0
 
-int rand_between(int lower, int upper){
-  return rand() % (upper - lower + 1) + lower;
+int Generator::rand_between(int lower, int upper){
+  std::uniform_int_distribution<unsigned> uni(lower, upper);
+  return uni(gen);
 }
 
 unsigned gcd(unsigned a, unsigned b) {
@@ -29,8 +29,12 @@ void set_c_and_t(double d, Task& t){
   t.c = (unsigned)(d / r);
 }
 
-Generator::Generator(double u, int n)
-  : utilisation_goal(u/100.0), n(n), tasks(n) {
+Generator::Generator(double u, int n, int seed)
+  : utilisation_goal(u/100.0), n(n), tasks(n), gen(seed) {
+  if (utilisation_goal > n){
+    std::cout << "Warning: cannot satisfy conditions -> setting u to 100 * n..." << std::endl;
+    utilisation_goal = n;
+  }
   create_jobs();
 }
 
@@ -38,14 +42,17 @@ void Generator::create_jobs(){
   Task t;
   const double mean = utilisation_goal / (double)n;
   const double dif = fmin(1-mean, mean);
-  std::default_random_engine gen;
   std::uniform_real_distribution<double> uni(mean-dif, mean+dif);
 
   std::vector<double> us(n);
   for(auto it = us.begin(); it != us.end(); ++it){
-    *it = -log(uni(gen));
+    *it = uni(gen);
   }
   double s = std::accumulate(us.begin(), us.end(), 0.0);
+  if (s == n){
+    create_dumb();
+    return;
+  }
   for(auto it = us.begin(); it != us.end(); ++it){
     *it = utilisation_goal * *it / s;
   }
@@ -55,6 +62,23 @@ void Generator::create_jobs(){
     t.o = rand_between(O_LOWER_LIMIT, O_UPPER_LIMIT);
     t.u = (double)t.c / t.t;
     tasks[i] = t;
+  }
+  o_shift();
+}
+
+void Generator::create_dumb(){
+  std::uniform_int_distribution<unsigned> uni(1, UNI_UPPER_LIMIT);
+  for (size_t i = 0; i < (unsigned)n; ++i) {
+    unsigned r = uni(gen);
+    tasks[i] = Task(uni(gen), r, r, r);
+  }
+  o_shift();
+}
+
+void Generator::o_shift(){
+  const unsigned m = std::min_element(tasks.begin(), tasks.end(), [](Task t, Task s) {return t.o <= s.o;})->o;
+  for(auto it = tasks.begin(); it != tasks.end(); ++it){
+    it->o -= m;
   }
 }
 

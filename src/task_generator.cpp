@@ -6,7 +6,6 @@
 #include <ctime>
 
 int main(int argc, char* argv[]){
-  srand((unsigned)time(NULL));
   double u_goal;
   int n;
   std::string out_file;
@@ -22,12 +21,7 @@ int main(int argc, char* argv[]){
     }
   }
 
-  if (u_goal > 100 * n){
-    std::cerr << "Impossible to generate: not enough tasks!" << std::endl;
-    return EXIT_FAILURE;
-  }
-
-  Generator g(u_goal, n);
+  Generator g(u_goal, n, (int)time(0));
   std::cout << "Utilisation = " << g.u() * 100 << std::endl;
   std::ofstream out;
   out.open(out_file);
