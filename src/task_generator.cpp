@@ -22,9 +22,13 @@ int main(int argc, char* argv[]){
     }
   }
 
+  if (u_goal > 100 * n){
+    std::cerr << "Impossible to generate: not enough tasks!" << std::endl;
+    return EXIT_FAILURE;
+  }
+
   Generator g(u_goal, n);
-  std::cout << g.u() << '\n';
-  std::cout << g.utilisation_check() << '\n';
+  std::cout << "Utilisation = " << g.u() * 100 << std::endl;
   std::ofstream out;
   out.open(out_file);
   out << g.pprint();

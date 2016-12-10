@@ -5,37 +5,57 @@
 #include <cstring>
 #include <sstream>
 #include <iostream>
+#include <algorithm>
+#include <random>
 
-#define T_UPPER_LIMIT 100
-#define T_LOWER_LIMIT 10
+#define UNI_UPPER_LIMIT 100
+#define UNI_LOWER_LIMIT 10
 #define O_UPPER_LIMIT 100
 #define O_LOWER_LIMIT 0
+#define PRECISION 1000.0
 
 int rand_between(int lower, int upper){
   return rand() % (upper - lower + 1) + lower;
 }
 
+unsigned gcd(unsigned a, unsigned b) {
+    return b == 0 ? a : gcd(b, a % b);
+}
+
+void set_c_and_t(double d, Task& t){
+  d = round((d - std::floor(d)) * PRECISION);
+  const double r = gcd((unsigned)round(d), PRECISION);
+  t.t = (unsigned)(PRECISION / r);
+  t.c = (unsigned)(d / r);
+}
+
 Generator::Generator(double u, int n)
-  : utilisation_goal(u/100), n(n), tasks(n) {
+  : utilisation_goal(u/100.0), n(n), tasks(n) {
   create_jobs();
 }
 
 void Generator::create_jobs(){
-  unsigned t, d, c, o;
-  for (size_t i = 0; i < (unsigned)n-1; ++i) {
-    do {
-      t = rand_between(T_LOWER_LIMIT, T_UPPER_LIMIT);
-    } while (1 > t * utilisation_goal / 2);
-    c = rand_between(1, (int)round(t * utilisation_goal / 2));
-    d = rand_between(c+1, t);
-    o = rand_between(O_LOWER_LIMIT, O_UPPER_LIMIT);
-    tasks[i] = Task(o, t, d, c);
-    utilisation_goal -= (double)c / (double)t;
+  Task t;
+  const double mean = utilisation_goal / (double)n;
+  const double dif = fmin(1-mean, mean);
+  std::default_random_engine gen;
+  std::uniform_real_distribution<double> uni(mean-dif, mean+dif);
+
+  std::vector<double> us(n);
+  for(auto it = us.begin(); it != us.end(); ++it){
+    *it = -log(uni(gen));
   }
-  t = rand_between(T_LOWER_LIMIT, T_UPPER_LIMIT);
-  c = (int)round(t * utilisation_goal);
-  d = rand_between(c+1, t);
-  tasks[n-1] = Task(0, t, d, c);
+  double s = std::accumulate(us.begin(), us.end(), 0.0);
+  for(auto it = us.begin(); it != us.end(); ++it){
+    *it = utilisation_goal * *it / s;
+  }
+  for (size_t i = 0; i < (unsigned)n; ++i) {
+    set_c_and_t(us[i], t);
+    t.d = rand_between(t.c, t.t);
+    t.o = rand_between(O_LOWER_LIMIT, O_UPPER_LIMIT);
+    t.u = (double)t.c / t.t;
+    tasks[i] = t;
+  }
 }
 
 std::string Generator::pprint() const{

@@ -6,7 +6,7 @@
 
 class Generator {
   double utilisation_goal;
-  int n;
+  const int n;
   std::vector<Task> tasks;
 
 public:
