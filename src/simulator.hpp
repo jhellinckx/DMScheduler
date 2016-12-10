@@ -9,44 +9,43 @@
 #include <string>
 #include <sstream>
 #include <numeric>
+#include <map>
 
 template<typename PriorityComp>
 class FTPSimulator{
 protected:
 	PriorityComp _priority;
-	Job _running_job;
-	bool _idle;
+	bool _schedulable;
+	std::size_t _num_procs;
+	std::size_t _num_queues;
+	std::vector<Job> _running_job;
+	std::vector<bool> _idle;
 	std::vector<Task> _tasks;
-	std::priority_queue<Job, std::vector<Job>, PriorityComp> _ready_jobs;
+	std::vector<std::priority_queue<Job, std::vector<Job>, PriorityComp>> _ready_jobs;
 	std::vector<Job> _current_jobs;
 	std::vector<Job> _completed_jobs;
 	unsigned _t_reached;
+	std::vector<std::vector<int>> _executions;
 
-	FTPSimulator(const std::vector<Task>& tasks);
+	FTPSimulator(const std::vector<Task>& tasks, std::size_t p, std::size_t q);
 	void set_tasks_id();
-	void execute_job(unsigned t);
-	void add_job(const Job& job);
-	void terminate_running_job();
+	void execute_job(unsigned t, std::size_t p);
+	void terminate_running_job(std::size_t p);
 	void incoming_jobs(unsigned t);
-	void schedule();
-	void preempt();
+	void add_job(const Job& job, std::size_t q);
+	void preempt(std::size_t p, std::size_t q);
 	bool check_deadlines(unsigned t);
 
+	virtual unsigned job_queue(const Job& job) = 0;
+	virtual void schedule() = 0;
+
 public:
-	virtual void run(unsigned t_max);
-	virtual void clear();
-	
+	virtual void run();
+	virtual unsigned hyper_period(const std::vector<Task>& tasks) const;
+	virtual unsigned feasibility_interval(const std::vector<Task>& tasks) const;
+	virtual unsigned feasibility_interval() const;
 	virtual std::string stringify_simulation();
-
-	unsigned hyper_period() const {
-		return (unsigned)std::accumulate(_tasks.begin(), _tasks.end(), 0, [](const unsigned& sum, const Task& task){ return sum + task.t; });
-	}
-
-	unsigned feasibility_interval() const {
-		return (*std::max_element(_tasks.begin(), _tasks.end(), [](const Task& x, const Task& y){ return x.o < y.o; })).o + 2 * hyper_period();
-	}
-
-	std::vector<Task> tasks() const { return _tasks; }
+	virtual void prettify_simulation(const std::string& filename);
 
 	virtual ~FTPSimulator(){}
 };
@@ -58,31 +57,29 @@ public:
 
 class PDMSimulator : public FTPSimulator<DMPriority>{
 	std::vector<std::vector<Task>> _partitioning;
-
-	std::vector<Job> _running_partitioning;
-	std::vector<bool> _idle_partitioning;
-	std::vector<std::priority_queue<Job, std::vector<Job>, DMPriority>> _ready_partitioning;
-	std::vector<std::vector<Job>> _current_partitioning;
-	std::vector<std::vector<Job>> _completed_partitioning;
-	std::vector<unsigned> _t_reached_partitioning;
-	
+	std::map<unsigned, unsigned> _task_partition;
 
 	void partition_tasks(unsigned partitions);
 
+protected:
+	unsigned job_queue(const Job& job);
+	void schedule();
+	
 public:
 	PDMSimulator(const std::vector<Task>& tasks, unsigned partitions);
-
-	virtual void run(unsigned t_max);
-	void save_partition(unsigned partition);
-	void set_to_partition(unsigned partition);
-
+	unsigned feasibility_interval() const;
 	std::string stringify_partitions();
-	std::string stringify_simulation();
-
 	virtual ~PDMSimulator() {}
 };
 
 class GDMSimulator : public FTPSimulator<DMPriority>{
+
+protected:
+	unsigned job_queue(const Job& job);
+	void schedule();
+
+public:
+	GDMSimulator(const std::vector<Task>& tasks, unsigned procs);
 
 	virtual ~GDMSimulator() {}
 
