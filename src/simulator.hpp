@@ -28,7 +28,6 @@ protected:
 	std::vector<std::vector<int>> _executions;
 
 	FTPSimulator(const std::vector<Task>& tasks, std::size_t p, std::size_t q);
-	void set_tasks_id();
 	void execute_job(unsigned t, std::size_t p);
 	void terminate_running_job(std::size_t p);
 	void incoming_jobs(unsigned t);
@@ -50,6 +49,8 @@ public:
 	virtual ~FTPSimulator(){}
 };
 
+
+
 class DMPriority{
 public:
 	bool operator() (const Job& a, const Job& b) const;
@@ -58,6 +59,7 @@ public:
 class PDMSimulator : public FTPSimulator<DMPriority>{
 	std::vector<std::vector<Task>> _partitioning;
 	std::map<unsigned, unsigned> _task_partition;
+	bool _partitionable;
 
 	void partition_tasks(unsigned partitions);
 
@@ -69,8 +71,15 @@ public:
 	PDMSimulator(const std::vector<Task>& tasks, unsigned partitions);
 	unsigned feasibility_interval() const;
 	std::string stringify_partitions();
+
+	unsigned partitions_used() const;
+
+	bool partitionable() const { return _partitionable; }
+	virtual void run();
 	virtual ~PDMSimulator() {}
 };
+
+
 
 class GDMSimulator : public FTPSimulator<DMPriority>{
 

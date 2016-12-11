@@ -31,4 +31,7 @@
 main
 !main.cpp
 taskGenerator
+simDM
+study
 .DS_Store
+tasks.txt

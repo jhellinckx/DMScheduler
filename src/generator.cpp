@@ -11,7 +11,7 @@
 #define O_LOWER_LIMIT 0
 
 int rand_between(int lower, int upper){
-  return rand() % (upper - lower + 1) + lower;
+  return (rand() % (upper - lower + 1)) + lower;
 }
 
 Generator::Generator(double u, int n)

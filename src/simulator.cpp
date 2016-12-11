@@ -22,11 +22,6 @@
 
 
 template<typename PriorityComp>
-void FTPSimulator<PriorityComp>::set_tasks_id() {
-	for(std::size_t i = 0; i < _tasks.size(); ++i){ _tasks[i].id = (unsigned) i + 1; }
-}
-
-template<typename PriorityComp>
 void FTPSimulator<PriorityComp>::execute_job(unsigned t, std::size_t p){
 	if(! _idle[p]){
 		_running_job[p].execute(t);
@@ -82,7 +77,7 @@ FTPSimulator<PriorityComp>::FTPSimulator(const std::vector<Task>& tasks, std::si
 	_priority(), _schedulable(true), _num_procs(num_procs), _num_queues(num_queues), 
 	_running_job(num_procs), _idle(num_procs, true), _tasks(tasks), _ready_jobs(num_queues), 
 	_current_jobs(), _completed_jobs(), _t_reached(0), _executions(num_procs) {
-		set_tasks_id();
+
 	}
 
 template<typename PriorityComp>
@@ -181,7 +176,7 @@ bool DMPriority::operator() (const Job& a, const Job& b) const {
 
 PDMSimulator::PDMSimulator(const std::vector<Task>& tasks, unsigned partitions) : 
 	FTPSimulator<DMPriority>(tasks, partitions, partitions), 
-	_partitioning(partitions), _task_partition() {
+	_partitioning(partitions), _task_partition(), _partitionable(true) {
 		partition_tasks(partitions);
 	}
 
@@ -207,7 +202,7 @@ void PDMSimulator::partition_tasks(unsigned partitions){
 			_task_partition[task.id] = partition;
 	  		utilization[partition] += task.u;
 		} else {
-	  		std::cout << "No Partition here" << std::endl;
+	  		_partitionable = false;
 	  		break;
 		}
 	}
@@ -232,6 +227,12 @@ void PDMSimulator::schedule(){
 	}
 }
 
+void PDMSimulator::run(){
+	if(_partitionable){
+		FTPSimulator::run();
+	}
+}
+
 unsigned PDMSimulator::feasibility_interval() const {
 	std::vector<unsigned> intervals(_partitioning.size());
 	std::transform(_partitioning.begin(), _partitioning.end(), intervals.begin(), 
@@ -251,6 +252,12 @@ std::string PDMSimulator::stringify_partitions() {
 		ss << "u = " << acc_u << std::endl;
 	}
 	return ss.str();
+}
+
+
+unsigned PDMSimulator::partitions_used() const {
+	return (unsigned) (std::find_if(_partitioning.begin(), _partitioning.end(), 
+		[](const std::vector<Task>& partition){ return partition.empty(); }) - _partitioning.begin());
 }
 
 

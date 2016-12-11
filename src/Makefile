@@ -4,19 +4,22 @@ LDFLAGS = -lm
 ALL_SRC = $(wildcard *.cpp)
 ALL_OBJ = $(patsubst %.cpp, %.o, ${ALL_SRC})
 
-GEN_OBJ = task.o generator.o task_generator.o
-
 GEN_MAIN = task_generator.o
+SIM_MAIN = sim_dm.o
 
-MAIN_OBJ = $(filter-out ${GEN_MAIN}, ${ALL_OBJ})
+SIM_EXEC = simDM
+GEN_EXEC = taskGenerator
 
-all: main taskGenerator
+SIM_OBJ = $(filter-out ${GEN_MAIN}, ${ALL_OBJ})
+GEN_OBJ = $(filter-out ${SIM_MAIN}, ${ALL_OBJ})
 
-main: ${MAIN_OBJ}
-	${CXX} -o $@ $^ ${LDFLAGS}
+all: sim gen
 
-taskGenerator: ${GEN_OBJ}
-	${CXX} -o $@ $^ ${LDFLAGS}
+sim: ${SIM_OBJ}
+	${CXX} -o ${SIM_EXEC} $^ ${LDFLAGS}
+
+gen: ${GEN_OBJ}
+	${CXX} -o ${GEN_EXEC} $^ ${LDFLAGS}
 
 .PHONY: clean mrproper
 
@@ -24,4 +27,4 @@ clean:
 	rm -f *.o
 
 mrproper: clean
-	rm -f main
+	rm -f simDM taskGenerator
