@@ -20,9 +20,17 @@
 #define PYTHON_PRETTIFIER_FILENAME "prettify_schedule.py"
 #define SHARED_QUEUE 0
 
+template<typename PriorityComp>
+PCDSimulator<PriorityComp>::PCDSimulator(const std::vector<Task>& tasks, std::size_t num_procs, std::size_t num_queues) : 
+	_priority(), _schedulable(true), _num_procs(num_procs), _num_queues(num_queues), 
+	_running_job(num_procs), _idle(num_procs, true), _tasks(tasks), _ready_jobs(num_queues), 
+	_current_jobs(), _completed_jobs(), _t_reached(0), _executions(num_procs),
+	_preemptions(num_procs) {
+
+	}
 
 template<typename PriorityComp>
-void FTPSimulator<PriorityComp>::execute_job(unsigned t, std::size_t p){
+void PCDSimulator<PriorityComp>::execute_job(unsigned t, std::size_t p){
 	if(! _idle[p]){
 		_running_job[p].execute(t);
 		_executions[p].push_back((int)_running_job[p].task_id);
@@ -36,7 +44,7 @@ void FTPSimulator<PriorityComp>::execute_job(unsigned t, std::size_t p){
 }
 
 template<typename PriorityComp>
-void FTPSimulator<PriorityComp>::terminate_running_job(std::size_t p){
+void PCDSimulator<PriorityComp>::terminate_running_job(std::size_t p){
 	_completed_jobs.push_back(_running_job[p]);
 	_current_jobs.erase(std::remove_if(_current_jobs.begin(), _current_jobs.end(), 
 		[&](const Job& job){ return job.task_id == _running_job[p].task_id; }), _current_jobs.end());
@@ -44,7 +52,7 @@ void FTPSimulator<PriorityComp>::terminate_running_job(std::size_t p){
 }
 
 template<typename PriorityComp>
-void FTPSimulator<PriorityComp>::incoming_jobs(unsigned t) {
+void PCDSimulator<PriorityComp>::incoming_jobs(unsigned t) {
 	for(const Task& task : _tasks){
 		if(((int)t - (int)task.o) % (int)task.t == 0){
 			Job job = Job(task, t);
@@ -54,37 +62,30 @@ void FTPSimulator<PriorityComp>::incoming_jobs(unsigned t) {
 }
 
 template<typename PriorityComp>
-void FTPSimulator<PriorityComp>::add_job(const Job& job, std::size_t q){
+void PCDSimulator<PriorityComp>::add_job(const Job& job, std::size_t q){
         _current_jobs.push_back(job);
         _ready_jobs[q].push(job);
 }
 
 template<typename PriorityComp>
-void FTPSimulator<PriorityComp>::preempt(std::size_t p, std::size_t q){
+void PCDSimulator<PriorityComp>::preempt(std::size_t p, std::size_t q){
 	_ready_jobs[q].push(_running_job[p]);
 	_running_job[p] = _ready_jobs[q].top();
 	_ready_jobs[q].pop();
+	++_preemptions[p];
 }
 
 template<typename PriorityComp>
-bool FTPSimulator<PriorityComp>::check_deadlines(unsigned t){
+bool PCDSimulator<PriorityComp>::check_deadlines(unsigned t){
 	return (std::any_of(_current_jobs.begin(), _current_jobs.end(), 
 		[t](const Job& job){ return job.missed(t); })) ? DEADLINES_NOT_OK : DEADLINES_OK;
 }
 
 template<typename PriorityComp>
-FTPSimulator<PriorityComp>::FTPSimulator(const std::vector<Task>& tasks, std::size_t num_procs, std::size_t num_queues) : 
-	_priority(), _schedulable(true), _num_procs(num_procs), _num_queues(num_queues), 
-	_running_job(num_procs), _idle(num_procs, true), _tasks(tasks), _ready_jobs(num_queues), 
-	_current_jobs(), _completed_jobs(), _t_reached(0), _executions(num_procs) {
-
-	}
-
-template<typename PriorityComp>
-void FTPSimulator<PriorityComp>::run(){
+bool PCDSimulator<PriorityComp>::run(){
 	for(unsigned t = 0; t <= feasibility_interval(); ++t){
 		incoming_jobs(t);
-		schedule();
+		schedule(t);
 		for(std::size_t p = 0; p < _num_procs; ++p){ execute_job(t, p); }
 		if(check_deadlines(t) == DEADLINES_NOT_OK){
 			_t_reached = t;
@@ -92,10 +93,62 @@ void FTPSimulator<PriorityComp>::run(){
 			break;
 		}
 	}
+	return _schedulable;
 }
 
 template<typename PriorityComp>
-std::string FTPSimulator<PriorityComp>::stringify_simulation() {
+unsigned PCDSimulator<PriorityComp>::procs_used() const {
+	return (unsigned) (std::find_if(_executions.begin(), _executions.end(), 
+		[](const std::vector<int>& proc_execs){
+			return std::all_of(proc_execs.begin(), proc_execs.end(), [](int exec){ return exec == IDLE_EXEC; });
+		}) - _executions.begin());
+}
+
+template<typename PriorityComp>
+std::vector<unsigned> PCDSimulator<PriorityComp>::idle_time() const{
+	std::vector<unsigned> idle(_num_procs);
+	for(std::size_t i = 0; i < idle.size(); ++i){
+		idle[i] = (unsigned) std::count(_executions[i].begin(), _executions[i].end(), IDLE_EXEC);
+	}
+	return idle;
+}
+
+template<typename PriorityComp>
+unsigned PCDSimulator<PriorityComp>::tot_idle_time() const{
+	std::vector<unsigned> idle = idle_time();
+	return (unsigned) std::accumulate(idle.begin(), idle.end(), 0);
+}
+
+template<typename PriorityComp>
+std::vector<unsigned> PCDSimulator<PriorityComp>::preemptions() const{
+	return _preemptions;
+}
+
+template<typename PriorityComp>
+unsigned PCDSimulator<PriorityComp>::tot_preemptions() const{
+	return (unsigned) std::accumulate(_preemptions.begin(), _preemptions.end(), 0);
+}
+
+template<typename PriorityComp>
+std::vector<double> PCDSimulator<PriorityComp>::utilization() const{
+	std::vector<unsigned> idle = idle_time();
+	std::vector<double> utils(_num_procs);
+	for(std::size_t i = 0; i < utils.size(); ++i){
+		utils[i] = 1.0 - (idle[i] / ((double)_executions[i].size()));
+	}
+	return utils;
+}
+
+template<typename PriorityComp>
+double PCDSimulator<PriorityComp>::tot_utilization() const{
+	return 1.0 - (tot_idle_time() / std::accumulate(_executions.begin(), _executions.end(), 0.0,
+		[](const double& sum, const std::vector<int>& proc_execs){
+			return sum + (double) proc_execs.size();
+		}));
+}
+
+template<typename PriorityComp>
+std::string PCDSimulator<PriorityComp>::stringify_simulation() {
 	std::stringstream ss;
 	if(_schedulable){
 		ss << "Scheduling successful." << std::endl;
@@ -127,7 +180,7 @@ std::string FTPSimulator<PriorityComp>::stringify_simulation() {
 }
 
 template<typename PriorityComp>
-void FTPSimulator<PriorityComp>::prettify_simulation(const std::string& filename) {
+void PCDSimulator<PriorityComp>::prettify_simulation(const std::string& filename) {
 	std::stringstream ss;
 	ss << "python " << PYTHON_PRETTIFIER_FILENAME << " " << filename << " ";
 	ss << "\"[";
@@ -157,17 +210,17 @@ void FTPSimulator<PriorityComp>::prettify_simulation(const std::string& filename
 }
 
 template<typename PriorityComp>
-unsigned FTPSimulator<PriorityComp>::hyper_period(const std::vector<Task>& tasks) const {
+unsigned PCDSimulator<PriorityComp>::hyper_period(const std::vector<Task>& tasks) const {
 	return (unsigned)std::accumulate(tasks.begin(), tasks.end(), 0, [](const unsigned& sum, const Task& task){ return sum + task.t; });
 }
 
 template<typename PriorityComp>
-unsigned FTPSimulator<PriorityComp>::feasibility_interval(const std::vector<Task>& tasks) const {
+unsigned PCDSimulator<PriorityComp>::feasibility_interval(const std::vector<Task>& tasks) const {
 	return (*std::max_element(tasks.begin(), tasks.end(), [](const Task& x, const Task& y){ return x.o < y.o; })).o + 2 * hyper_period(tasks);
 }
 
 template<typename PriorityComp>
-unsigned FTPSimulator<PriorityComp>::feasibility_interval() const { return feasibility_interval(_tasks); }
+unsigned PCDSimulator<PriorityComp>::feasibility_interval() const { return feasibility_interval(_tasks); }
 
 
 bool DMPriority::operator() (const Job& a, const Job& b) const {
@@ -175,7 +228,7 @@ bool DMPriority::operator() (const Job& a, const Job& b) const {
 }
 
 PDMSimulator::PDMSimulator(const std::vector<Task>& tasks, unsigned partitions) : 
-	FTPSimulator<DMPriority>(tasks, partitions, partitions), 
+	PCDSimulator<DMPriority>(tasks, partitions, partitions), 
 	_partitioning(partitions), _task_partition(), _partitionable(true) {
 		partition_tasks(partitions);
 	}
@@ -212,7 +265,7 @@ unsigned PDMSimulator::job_queue(const Job& job){
 	return _task_partition[job.task_id];
 }
 
-void PDMSimulator::schedule(){
+void PDMSimulator::schedule(unsigned t){
 	for(std::size_t p = 0; p < _num_procs; ++p){
 		if(! _ready_jobs[p].empty()){
 			if(_idle[p]){
@@ -227,16 +280,17 @@ void PDMSimulator::schedule(){
 	}
 }
 
-void PDMSimulator::run(){
+bool PDMSimulator::run(){
 	if(_partitionable){
-		FTPSimulator::run();
+		return PCDSimulator::run();
 	}
+	return false;
 }
 
 unsigned PDMSimulator::feasibility_interval() const {
 	std::vector<unsigned> intervals(_partitioning.size());
 	std::transform(_partitioning.begin(), _partitioning.end(), intervals.begin(), 
-		[this](const std::vector<Task>& tasks){ return FTPSimulator::feasibility_interval(tasks); });
+		[this](const std::vector<Task>& tasks){ return PCDSimulator::feasibility_interval(tasks); });
 	return *(std::max_element(intervals.begin(), intervals.end()));
 }
 
@@ -262,7 +316,7 @@ unsigned PDMSimulator::partitions_used() const {
 
 
 GDMSimulator::GDMSimulator(const std::vector<Task>& tasks, unsigned procs) : 
-	FTPSimulator<DMPriority>(tasks, procs, 1) {
+	PCDSimulator<DMPriority>(tasks, procs, 1) {
 
 	}
 
@@ -270,7 +324,7 @@ unsigned GDMSimulator::job_queue(const Job& job) {
 	return SHARED_QUEUE;
 }
 
-void GDMSimulator::schedule(){
+void GDMSimulator::schedule(unsigned t){
 	for(std::size_t p = 0; p < _num_procs; ++p){
 		if(_idle[p] && ! _ready_jobs[SHARED_QUEUE].empty()){
 			_running_job[p] = _ready_jobs[SHARED_QUEUE].top();
