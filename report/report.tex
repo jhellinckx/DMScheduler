@@ -20,10 +20,35 @@
 \maketitle
 
 \section{Introduction}
+This project consist in studying performances of \emph{Deadline-monotonic scheduling} (DM) algorithm on systems with two different strategies: global and partitioned with best fit. Systems have $n$ periodic, asynchronous and independant tasks $\tau$ with constrained deadlines on a multiprocessor systems.
+
+DM is a \emph{Fixed Task Priority Scheduler} (FTP): each tasks are ranked determinstically by their deadlines: the lower the relative deadline, the higher the priority.
+
+Partitioned strategy aims to find a packing where each task cannot migrate from one processor to the other. In this implementation, the rule to assign tasks is \emph{Best-Fit}: tasks look for remaining utilisation on each processor and is assigned to the processor with the minimum remaining.
+
+Global strategy, on the other hand, permits to tasks to migrate between processors during their lifetime: they can then start their execution on a processor and resume on another one.
 
 \section{Code description}
+Three executables were asked in order to complete this project:
+\begin{enumerate}
+  \item a simulator, taking as list of tasks, a number of processor and a strategy and simulate the system on the interval $I = [0; O_{max} + 2 * P]$;
+  \item a generator, which creates a list of $n$ tasks with an utilisation $u$;
+  \item a study program, to test DM's performances.
+\end{enumerate}
+
+\subsection{Simulator}
+
+\subsection{Generator}
+
+\subsection{Study}
 
 \section{Encoutered problems}
+
+\subsection{Simulator}
+
+\subsection{Generator}
+
+\subsection{Study}
 
 \section{Comparison tests specification}
 
