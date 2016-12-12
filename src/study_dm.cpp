@@ -16,6 +16,7 @@ const std::string PYTHON_COMMAND = "python";
 const std::string PYTHON_PLOTTER_FILENAME = "plotter.py";
 const std::size_t SAMPLE_SIZE_PER_VALUE = 10;
 
+const std::string PLOTS_DIR = "plots/";
 const std::string PLOT_IMAGE_TYPE = "png";
 
 void stream_double_list(std::stringstream& ss, const std::vector<double>& vec){
@@ -44,8 +45,7 @@ void prettify_plot(	const std::vector<double>& xs,
 	stream_double_list(ss, ys1);
 	ss << " ";
 	stream_double_list(ss, ys2);
-	ss << " \'" << x_name << "\' \'" << y_name << "\' \'" << y1_label << "\' \'" << y2_label << "\' \'" << filename << "." << PLOT_IMAGE_TYPE << "\'";
-	std::cout << ss.str() << std::endl;
+	ss << " \'" << x_name << "\' \'" << y_name << "\' \'" << y1_label << "\' \'" << y2_label << "\' \'" << PLOTS_DIR << filename << "." << PLOT_IMAGE_TYPE << "\'";
 	pid_t pid = fork();
     if(pid < 0){
         throw std::runtime_error("Failed to execute plotting command");
@@ -141,7 +141,10 @@ void compare_util(){
 		++i;
 	}
 
-	prettify_plot(utils, part_loads, global_loads, "utilization", "system load", "partition", "global", "compareload");
+	prettify_plot(utils, part_loads, global_loads, "utilization", "system load", "partition", "global", "load_util_fixed");
+	prettify_plot(utils, part_loads_min, global_loads_min, "utilization", "system load", "partition", "global", "load_util_min");
+	prettify_plot(utils, part_num_required_procs, global_num_required_procs, "utilization", "processors required", "partition", "global", "procs_util");
+	prettify_plot(utils, part_num_schedulable, global_num_schedulable, "utilization", "schedulable", "partition", "global", "schedulable_util");
 }
 
 void compare_num_tasks(){
@@ -169,9 +172,14 @@ void compare_num_tasks(){
 		num_tasks[i] = n;
 		++i;
 	}
+
+	prettify_plot(num_tasks, part_loads, global_loads, "number of tasks", "system load", "partition", "global", "load_num_tasks_fixed");
+	prettify_plot(num_tasks, part_loads_min, global_loads_min, "number of tasks", "system load", "partition", "global", "load_num_tasks_min");
+	prettify_plot(num_tasks, part_num_required_procs, global_num_required_procs, "number of tasks", "processors required", "partition", "global", "procs_num_tasks");
+	prettify_plot(num_tasks, part_num_schedulable, global_num_schedulable, "number of tasks", "schedulable", "partition", "global", "schedulable_num_tasks");
 }
 
 int main(){
 	compare_util();
-	//compare_num_tasks();
+	compare_num_tasks();
 }

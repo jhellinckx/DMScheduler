@@ -16,6 +16,8 @@ SIM_OBJ = $(filter-out ${GEN_MAIN} ${STUDY_MAIN}, ${ALL_OBJ})
 GEN_OBJ = $(filter-out ${SIM_MAIN} ${STUDY_MAIN}, ${ALL_OBJ})
 STUDY_OBJ = $(filter-out ${SIM_MAIN} ${GEN_MAIN}, ${ALL_OBJ})
 
+PLOTSDIR = plots
+
 all: sim gen study
 
 sim: ${SIM_OBJ}
@@ -25,12 +27,12 @@ gen: ${GEN_OBJ}
 	${CXX} -o ${GEN_EXEC} $^ ${LDFLAGS}
 
 study: ${STUDY_OBJ}
-	${CXX} -o ${STUDY_EXEC} $^ ${LDFLAGS}
+	${CXX} -o ${STUDY_EXEC} $^ ${LDFLAGS} && if [ ! -d ${PLOTSDIR} ]; then mkdir ${PLOTSDIR}; fi
 
-.PHONY: clean mrproper
+.PHONY: clean mrproper plots
 
 clean:
 	rm -f *.o
 
 mrproper: clean
-	rm -f ${SIM_EXEC} ${GEN_EXEC} ${STUDY_EXEC}
+	rm -f ${SIM_EXEC} ${GEN_EXEC} ${STUDY_EXEC} && rm -rf ${PLOTSDIR}
