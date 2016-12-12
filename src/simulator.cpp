@@ -297,6 +297,7 @@ unsigned PCDSimulator<PriorityComp>::hyper_period(const std::vector<Task>& tasks
 
 template<typename PriorityComp>
 unsigned PCDSimulator<PriorityComp>::feasibility_interval(const std::vector<Task>& tasks) {
+	if(tasks.empty()) { return 0; }
 	return (*std::max_element(tasks.begin(), tasks.end(), [](const Task& x, const Task& y){ return x.o < y.o; })).o + 2 * hyper_period(tasks);
 }
 
