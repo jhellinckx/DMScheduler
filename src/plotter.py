@@ -20,7 +20,7 @@ xs1, ys1 = zip(*[(x, y) for x, y in zip(XS, YS1) if y != 'nan'])
 xs2, ys2 = zip(*[(x, y) for x, y in zip(XS, YS2) if y != 'nan'])
 
 plt.plot(xs1, ys1, "b-", label=Y1_LABEL)
-plt.plot(xs2, ys2, "b-", label=Y2_LABEL)
+plt.plot(xs2, ys2, "r-", label=Y2_LABEL)
 plt.xlabel(X_NAME)
 plt.ylabel(Y_NAME)
 plt.legend(loc=LEGEND_LOCATION)
