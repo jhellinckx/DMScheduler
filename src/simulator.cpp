@@ -155,7 +155,7 @@ bool PCDSimulator<PriorityComp>::run(){
 	while(std::any_of(_enabled_procs.begin(), _enabled_procs.end(), [](bool enabled){ return enabled; })){
 		incoming_jobs(t);
 		schedule();
-		for(std::size_t p = 0; p < _num_procs; ++p){ execute_job(t, p); }
+		for(std::size_t p = 0; p < _num_procs; ++p){ if(proc_enabled(p)){ execute_job(t, p); }}
 		if(check_deadlines(t) == DEADLINES_NOT_OK){
 			_t_reached = t;
 			_schedulable = false;
@@ -309,8 +309,14 @@ PDMSimulator::PDMSimulator(const std::vector<Task>& tasks, unsigned partitions) 
 	_feasibility_intervals(partitions) {
 		partition_tasks(partitions);
 		if(_partitionable){
+			unsigned max_fi = 0;
 			for(unsigned partition = 0; partition < partitions; ++partition){
-				_feasibility_intervals[partition] = PCDSimulator::feasibility_interval(_partitioning[partition]);
+				if((_feasibility_intervals[partition] = PCDSimulator::feasibility_interval(_partitioning[partition])) > max_fi){
+					max_fi = _feasibility_intervals[partition];
+				}
+			}
+			for(unsigned partition = 0; partition < partitions; ++partition){
+				if(_feasibility_intervals[partition] == 0) { _feasibility_intervals[partition] = max_fi; }
 			}
 		}
 	}
