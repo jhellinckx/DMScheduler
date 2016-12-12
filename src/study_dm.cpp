@@ -16,6 +16,8 @@ const std::string PYTHON_COMMAND = "python";
 const std::string PYTHON_PLOTTER_FILENAME = "plotter.py";
 const std::size_t SAMPLE_SIZE_PER_VALUE = 10;
 
+const std::string PLOT_IMAGE_TYPE = "png";
+
 void stream_double_list(std::stringstream& ss, const std::vector<double>& vec){
 	ss << "\"[";
 	for(std::size_t i = 0; i < vec.size(); ++i){
@@ -30,7 +32,11 @@ void stream_double_list(std::stringstream& ss, const std::vector<double>& vec){
 	ss << "]\"";
 }
 
-void prettify_plot(const std::vector<double>& xs, const std::vector<double>& ys1, const std::vector<double>& ys2){
+void prettify_plot(	const std::vector<double>& xs, 
+					const std::vector<double>& ys1, const std::vector<double>& ys2, 
+					const std::string& x_name, const std::string& y_name, 
+					const std::string& y1_label, const std::string& y2_label, 
+					const std::string& filename){
 	std::stringstream ss;
 	ss << PYTHON_COMMAND << " " << PYTHON_PLOTTER_FILENAME << " ";
 	stream_double_list(ss, xs);
@@ -38,8 +44,8 @@ void prettify_plot(const std::vector<double>& xs, const std::vector<double>& ys1
 	stream_double_list(ss, ys1);
 	ss << " ";
 	stream_double_list(ss, ys2);
-	ss << " a b c fig.png";
-	
+	ss << " \'" << x_name << "\' \'" << y_name << "\' \'" << y1_label << "\' \'" << y2_label << "\' \'" << filename << "." << PLOT_IMAGE_TYPE << "\'";
+	std::cout << ss.str() << std::endl;
 	pid_t pid = fork();
     if(pid < 0){
         throw std::runtime_error("Failed to execute plotting command");
@@ -135,7 +141,7 @@ void compare_util(){
 		++i;
 	}
 
-	prettify_plot(utils, part_loads, global_loads);
+	prettify_plot(utils, part_loads, global_loads, "utilization", "system load", "partition", "global", "compareload");
 }
 
 void compare_num_tasks(){
