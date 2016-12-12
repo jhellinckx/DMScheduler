@@ -1,23 +1,22 @@
-\documentclass{scrartcl}
-
-\usepackage[T1]{fontenc}
+% !TEX encoding = UTF-8 Unicode
+\documentclass[a4paper]{article}
 \usepackage[utf8]{inputenc}
-\usepackage{fourier}
-\usepackage[english]{babel}
+\usepackage[T1]{fontenc}
+\usepackage[francais]{babel}
 \usepackage{fullpage}
-\usepackage{graphicx}
 \usepackage{hyperref}
-\usepackage{url}
-\usepackage{listings}
-\usepackage{color}
-\usepackage{amsmath,amsfonts,amsthm}
-\usepackage[toc,page]{appendix}
-
+\usepackage{verbatim}
+\usepackage{graphicx}
+\usepackage[nonumberlist]{glossaries}
+\usepackage{amssymb,amsmath}
+\usepackage{subfig}
+\usepackage{float}
 \title{INFO-F404 - Real-Time Operating Systems\\Project 1: Global vs Partitioned DM}
 \author{Anthony Caccia \and J\'{e}r\^{o}me Hellinckx}
 \date{\today}
 
 \begin{document}
+\renewcommand{\labelitemi}{$\bullet$}
 \maketitle
 
 \section{Introduction}
@@ -42,6 +41,8 @@ Three executables were asked in order to complete this project:
 \end{enumerate}
 
 \subsection{Simulator}
+
+
 
 \subsection{Generator}
 \label{gendesc}
