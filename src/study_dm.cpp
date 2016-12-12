@@ -117,13 +117,6 @@ void compare_num_tasks(){
 		num_tasks[i] = n;
 		++i;
 	}
-
-	std::cout << part_loads << std::endl;
-	std::cout << global_loads << std::endl;
-	std::cout << part_loads_min << std::endl;
-	std::cout << global_loads_min << std::endl;
-
-
 }
 
 int main(){
