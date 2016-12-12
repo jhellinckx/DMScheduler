@@ -41,7 +41,23 @@ Three executables were asked in order to complete this project:
 \end{enumerate}
 
 \subsection{Simulator}
+Aside from the essential data types - \texttt{Task} and \texttt{Job} which are described in the files with corresponding names - needed by the scheduling, the simulator is fully defined by one main basic class (\texttt{PCDSimulator}) and two other classes (\texttt{PDMSimulator} and \texttt{GDMSimulator}) derived from said main class. The idea behind the abstract super class is to offer tools to facilitate the scheduling of systems of \underline{P}eriodic tasks with \underline{C}onstrained \underline{D}eadline (hence the name).
+This base class achieves that in the following ways : 
+\begin{itemize}
+	\item Being a template class permitting to specify a priority comparator between jobs. This flexibility is quite powerful because it means that one simply has to create a priority comparator between jobs and give it as template parameter to this class in order to define the desired priority assignment algorithm ;
+	\item Regrouping the \textit{ready} jobs into a priority queue where the priority is thus determined by the aforementioned class template argument such that the top of the queue is the job with highest priority ;
+	\item Proposing a method checking if any deadline was missed ;
+	\item Offering another method to generate jobs given a set of tasks ;
+	\item Completely defining a \texttt{run} method which mimics the behavior of a multiprocessor system by sequentially generating the jobs, calling the scheduler, executing the jobs on each processor and finally checking if any deadline was missed.	
+\end{itemize}
+\paragraph{}
+\texttt{PDMSimulator} is the class defining the \underline{P}artitioned strategy whereas \texttt{GDMsimulator} is the class describing the \underline{G}lobal strategy using a \underline{D}eadline \underline{M}onotonic priority assignment. The fundamental contribution of these classes is, as their naming may suggest, to stipulate to which processor each top priority job must be assigned to. This is in practice realized by \textit{overriding} the \texttt{schedule} method. 
 
+\begin{figure}[H]
+  \centering
+  \subfloat{\includegraphics[width=0.4\textwidth]{class_diagram.png}\label{fig:f1}}
+  \caption{Simulator class diagram}
+\end{figure}
 
 
 \subsection{Generator}
@@ -59,11 +75,20 @@ We then convert $u_i$ to fraction: the numerator will become the $c_i$ and the d
 
 All $o_i$ can be generated randomly, we will just substract each of them by the minimal $o_i$ so the minimal will be 0.
 
-\subsection{Study}
 
 \section{Encoutered problems and solutions}
 
 \subsection{Simulator}
+From a technical point of view, the primary problem that we faced when writing the simulator was to understand which parts of the global and partitioned strategy could be generalized in a base class that could be thus shared between the two classes. Realizing that at the end of the day the only difference between these two strategies was only how they would assign, at time $t$, the highest priority jobs to a set of processors lead to the class structure seen in \textsc{Figure 1}. That is actually why these two classes are so \textit{small}, since they mainly only override the \texttt{schedule} routine.
+\paragraph{}
+Moreover, we experienced some difficulties when trying to figure out what was really meant when stipulating that the simuator should output the number of processors \textit{required}. 
+To solve this issue, we organized the number of processors of a given task set into two categories :
+\begin{enumerate}
+\item The number of processors used. For example if the user entered 5 processors in the simulator but 3 of them were idle during the whole study interval, the number of processors used is 2.
+\item The minimum number of processors needed such that the task set is schedulable. 
+\end{enumerate}
+The latter category needs to be further explained for each strategy. In the case of the partition strategy, the minimum number of processors needed may not be obtainable. This is because we use a best-fit heuristic that will always partition the tasks into the same partitions. Hence, even if we increase the number of processors, the partitioning will not change and the processor that observed a missed deadline will again miss the same deadline. That is why, if a partitioning is found, the minimum number of processors needed is equal to the number of processors used if the partitioning is schedulable.
+However, if we consider the global strategy, it is quite obvious that for all valid task sets, there exist a minimum number of processor for which the task set is schedulable (let us for example take a number of processors equal to the number of the tasks). Said minimum is computed by using a binary search algorithm defined in \texttt{PCDSimulator}.
 
 \subsection{Generator}
 There could be problems in asked conditions: if the asked $u$ is bigger than $100 * n$, clearly it is impossible to generate $n$ tasks with $0 < u_i \leq 1$. If this case happen, $u$ is simply decreased to $100 * n$.
@@ -73,10 +98,7 @@ If we take an extreme case where it is asked to take $n$ jobs with a system util
 We thus have to reduce the interval were the random numbers are taken.
 We can handle this by reducing this interval: we take $[m - s; m + s]$ where $m = u / n$ and $s = \text{min}(m, 1-m)$.
 
-
-\subsection{Study}
-
-\section{Comparison tests specification}
+\section{Comparison tests specifications}
 
 \section{Results}
 
