@@ -12,7 +12,7 @@ void prettify_plot(std::vector<double> xs, std::vector<double> ys){
 }
 
 void compare_load(){
-	// Depending on the utilization
+	// Depending on the utilization with fixed and minimum proc numbers
 	const int num_tasks = 8;
 	const unsigned num_procs = 4;
 
@@ -22,17 +22,27 @@ void compare_load(){
 
 	std::vector<double> part_loads;
 	std::vector<double> global_loads;
+	std::vector<double> part_loads_min;
+	std::vector<double> global_loads_min;
 	std::vector<double> utils;
 	std::vector<Task> tasks;
 
 	for(double u = lower_u; u < upper_u; u += u_step){
 		Generator gen(u, num_tasks);
+
 		double tot_load_part = 0.0;
 		double tot_load_global = 0.0;
 		double schedulable_part = 0;
 		double schedulable_global = 0;
+
+		double tot_load_part_min = 0.0;
+		double tot_load_global_min = 0.0;
+		double schedulable_global_min = 0;
+		double schedulable_part_min = 0;
+
 		for(std::size_t i = 0; i < SAMPLE_SIZE_PER_VALUE; ++i){
 			tasks = gen.create_tasks();
+			// Fixed procs number
 			PDMSimulator p_sim(tasks, num_procs);
 			if(p_sim.run()){
 				tot_load_part += p_sim.tot_utilization();
@@ -43,16 +53,29 @@ void compare_load(){
 				tot_load_global += g_sim.tot_utilization();
 				++schedulable_global;
 			}
+			// Min procs numbers
+			PDMSimulator p_sim_min(tasks, PDMSimulator::min_partitions(tasks, num_procs));
+			if(p_sim_min.run()){
+				tot_load_part_min += p_sim_min.tot_utilization();
+				++schedulable_part_min;
+			}
+			GDMSimulator g_sim_min(tasks, GDMSimulator::min_procs(tasks, num_procs));
+			if(g_sim_min.run()){
+				tot_load_global_min += g_sim_min.tot_utilization();
+				++schedulable_global_min;
+			}
 		}
 
 		part_loads.push_back(tot_load_part / schedulable_part);
 		global_loads.push_back(tot_load_global / schedulable_global);
+		part_loads_min.push_back(tot_load_part_min / schedulable_part_min);
+		global_loads_min.push_back(tot_load_global_min / schedulable_global_min);
 	}
 
 	std::cout << part_loads << std::endl;
 	std::cout << global_loads << std::endl;
-
-
+	std::cout << part_loads_min << std::endl;
+	std::cout << global_loads_min << std::endl;
 
 	// Depending on the number of tasks
 	const double utilization = 70;
