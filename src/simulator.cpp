@@ -8,6 +8,7 @@
 #include <cctype>
 #include <unistd.h>
 #include <sstream>
+#include <stack>
 
 #include "task.hpp"
 #include "job.hpp"
@@ -23,15 +24,20 @@
 template<typename PriorityComp>
 PCDSimulator<PriorityComp>::PCDSimulator(const std::vector<Task>& tasks, std::size_t num_procs, std::size_t num_queues) : 
 	_priority(), _schedulable(true), _num_procs(num_procs), _num_queues(num_queues), 
-	_running_job(num_procs), _idle(num_procs, true), _tasks(tasks), _ready_jobs(num_queues), 
-	_current_jobs(), _completed_jobs(), _t_reached(0), _executions(num_procs),
-	_preemptions(num_procs) {
+	_running_job(num_procs), _idle(num_procs, true), _tasks(tasks), _enabled_tasks(tasks.size(), true),
+	_enabled_procs(num_procs, true), _ready_jobs(num_queues), _current_jobs(), _completed_jobs(), 
+	_t_reached(0), _executions(num_procs), _preemptions(num_procs) {
 
 	}
 
 template<typename PriorityComp>
+std::size_t PCDSimulator<PriorityComp>::id2pos(unsigned task_id) const {
+	return (std::size_t) (std::find_if(_tasks.begin(), _tasks.end(), [task_id](const Task& task) { return task_id == task.id; }) - _tasks.begin());
+}
+
+template<typename PriorityComp>
 void PCDSimulator<PriorityComp>::execute_job(unsigned t, std::size_t p){
-	if(! _idle[p]){
+	if(! _idle[p]) {
 		_running_job[p].execute(t);
 		_executions[p].push_back((int)_running_job[p].task_id);
 		if(_running_job[p].completed()){
@@ -54,9 +60,9 @@ void PCDSimulator<PriorityComp>::terminate_running_job(std::size_t p){
 template<typename PriorityComp>
 void PCDSimulator<PriorityComp>::incoming_jobs(unsigned t) {
 	for(const Task& task : _tasks){
-		if(((int)t - (int)task.o) % (int)task.t == 0){
+		if(task_enabled(task) && (((int)t - (int)task.o) % (int)task.t == 0)){
 			Job job = Job(task, t);
-			add_job(job, (std::size_t)job_queue(job));
+			add_job(job, job_queue(job.task_id));
 		}
 	}
 }
@@ -82,16 +88,71 @@ bool PCDSimulator<PriorityComp>::check_deadlines(unsigned t){
 }
 
 template<typename PriorityComp>
+void PCDSimulator<PriorityComp>::disable_task(const Task& task, bool remove_job) { 
+	_enabled_tasks[id2pos(task.id)] = false;
+	if(remove_job){
+		// Erase task job in _current_jobs vector
+		_current_jobs.erase(std::remove_if(_current_jobs.begin(), _current_jobs.end(), 
+			[task](const Job& job){ return job.task_id == task.id; }), _current_jobs.end());
+
+		// If the task job is currently assigned to a processor, set said processor to idle state
+		for(std::size_t i = 0; i < _running_job.size(); ++i){
+			if(_running_job[i].task_id == task.id){ _idle[i] = true; }
+		}
+
+		// Finally, remove the task job from its _read_jobs priority queue
+		std::size_t q = job_queue(task.id);
+		std::stack<Job> other_jobs;
+		bool found = false;
+		while((! found) && (! _ready_jobs[q].empty())){
+			if(_ready_jobs[q].top().task_id == task.id){
+				found = true;
+			}
+			else{
+				other_jobs.push(_ready_jobs[q].top());
+			}
+			_ready_jobs[q].pop();
+		}
+		while(! other_jobs.empty()){
+			_ready_jobs[q].push(other_jobs.top());
+			other_jobs.pop();
+		}
+	}
+}
+
+template<typename PriorityComp>
+void PCDSimulator<PriorityComp>::disable_proc(std::size_t p) {
+	_enabled_procs[p] = false;
+	if(! _idle[p]){
+		_ready_jobs[job_queue(_running_job[p].task_id)].push(_running_job[p]);
+	}
+	_idle[p] = true;
+}
+
+template<typename PriorityComp>
+bool PCDSimulator<PriorityComp>::task_enabled(const Task& task) const { 
+	return _enabled_tasks[id2pos(task.id)];
+}
+
+template<typename PriorityComp>
+bool PCDSimulator<PriorityComp>::proc_enabled(std::size_t p) const {
+	return _enabled_procs[p];
+}
+
+template<typename PriorityComp>
 bool PCDSimulator<PriorityComp>::run(){
-	for(unsigned t = 0; t <= feasibility_interval(); ++t){
+	unsigned t = 0;
+	while(std::any_of(_enabled_procs.begin(), _enabled_procs.end(), [](bool enabled){ return enabled; })){
 		incoming_jobs(t);
-		schedule(t);
-		for(std::size_t p = 0; p < _num_procs; ++p){ execute_job(t, p); }
+		schedule();
+		for(std::size_t p = 0; p < _num_procs; ++p){ if(proc_enabled(p)){ execute_job(t, p); }}
 		if(check_deadlines(t) == DEADLINES_NOT_OK){
 			_t_reached = t;
 			_schedulable = false;
 			break;
 		}
+		time_step(t);
+		++t;
 	}
 	return _schedulable;
 }
@@ -210,18 +271,14 @@ void PCDSimulator<PriorityComp>::prettify_simulation(const std::string& filename
 }
 
 template<typename PriorityComp>
-unsigned PCDSimulator<PriorityComp>::hyper_period(const std::vector<Task>& tasks) const {
+unsigned PCDSimulator<PriorityComp>::hyper_period(const std::vector<Task>& tasks) {
 	return (unsigned)std::accumulate(tasks.begin(), tasks.end(), 0, [](const unsigned& sum, const Task& task){ return sum + task.t; });
 }
 
 template<typename PriorityComp>
-unsigned PCDSimulator<PriorityComp>::feasibility_interval(const std::vector<Task>& tasks) const {
+unsigned PCDSimulator<PriorityComp>::feasibility_interval(const std::vector<Task>& tasks) {
 	return (*std::max_element(tasks.begin(), tasks.end(), [](const Task& x, const Task& y){ return x.o < y.o; })).o + 2 * hyper_period(tasks);
 }
-
-template<typename PriorityComp>
-unsigned PCDSimulator<PriorityComp>::feasibility_interval() const { return feasibility_interval(_tasks); }
-
 
 bool DMPriority::operator() (const Job& a, const Job& b) const {
 	return (a.d_rel == b.d_rel) ? a.task_id > b.task_id : a.d_rel > b.d_rel;
@@ -229,8 +286,14 @@ bool DMPriority::operator() (const Job& a, const Job& b) const {
 
 PDMSimulator::PDMSimulator(const std::vector<Task>& tasks, unsigned partitions) : 
 	PCDSimulator<DMPriority>(tasks, partitions, partitions), 
-	_partitioning(partitions), _task_partition(), _partitionable(true) {
+	_partitioning(partitions), _task_partition(), _partitionable(true), 
+	_feasibility_intervals(partitions) {
 		partition_tasks(partitions);
+		if(_partitionable){
+			for(unsigned partition = 0; partition < partitions; ++partition){
+				_feasibility_intervals[partition] = PCDSimulator::feasibility_interval(_partitioning[partition]);
+			}
+		}
 	}
 
 void PDMSimulator::partition_tasks(unsigned partitions){
@@ -261,13 +324,13 @@ void PDMSimulator::partition_tasks(unsigned partitions){
 	}
 }
 
-unsigned PDMSimulator::job_queue(const Job& job){
-	return _task_partition[job.task_id];
+std::size_t PDMSimulator::job_queue(unsigned task_id){
+	return (std::size_t)_task_partition[task_id];
 }
 
-void PDMSimulator::schedule(unsigned t){
+void PDMSimulator::schedule(){
 	for(std::size_t p = 0; p < _num_procs; ++p){
-		if(! _ready_jobs[p].empty()){
+		if(proc_enabled(p) && ! _ready_jobs[p].empty()){
 			if(_idle[p]){
 				_running_job[p] = _ready_jobs[p].top();
 				_ready_jobs[p].pop();
@@ -280,18 +343,22 @@ void PDMSimulator::schedule(unsigned t){
 	}
 }
 
+void PDMSimulator::time_step(unsigned t){
+	for(std::size_t i = 0; i < _partitioning.size(); ++i){
+		if(t == _feasibility_intervals[i]){
+			disable_proc(i);
+			for(const Task& task : _partitioning[i]){
+				disable_task(task, true);
+			}
+		}
+	}
+}
+
 bool PDMSimulator::run(){
 	if(_partitionable){
 		return PCDSimulator::run();
 	}
 	return false;
-}
-
-unsigned PDMSimulator::feasibility_interval() const {
-	std::vector<unsigned> intervals(_partitioning.size());
-	std::transform(_partitioning.begin(), _partitioning.end(), intervals.begin(), 
-		[this](const std::vector<Task>& tasks){ return PCDSimulator::feasibility_interval(tasks); });
-	return *(std::max_element(intervals.begin(), intervals.end()));
 }
 
 std::string PDMSimulator::stringify_partitions() {
@@ -316,17 +383,18 @@ unsigned PDMSimulator::partitions_used() const {
 
 
 GDMSimulator::GDMSimulator(const std::vector<Task>& tasks, unsigned procs) : 
-	PCDSimulator<DMPriority>(tasks, procs, 1) {
+	PCDSimulator<DMPriority>(tasks, procs, 1), 
+	_feasibility_interval(PCDSimulator::feasibility_interval(tasks)) {
 
 	}
 
-unsigned GDMSimulator::job_queue(const Job& job) {
+std::size_t GDMSimulator::job_queue(unsigned task_id) {
 	return SHARED_QUEUE;
 }
 
-void GDMSimulator::schedule(unsigned t){
+void GDMSimulator::schedule(){
 	for(std::size_t p = 0; p < _num_procs; ++p){
-		if(_idle[p] && ! _ready_jobs[SHARED_QUEUE].empty()){
+		if(proc_enabled(p) && _idle[p] && ! _ready_jobs[SHARED_QUEUE].empty()){
 			_running_job[p] = _ready_jobs[SHARED_QUEUE].top();
 			_ready_jobs[SHARED_QUEUE].pop();
 			_idle[p] = false;
@@ -336,12 +404,25 @@ void GDMSimulator::schedule(unsigned t){
 		bool unassigned_higher_priority;
 		do{
 			unassigned_higher_priority = false;
-			std::size_t lowest_priority_proc = (std::size_t) (std::min_element(_running_job.begin(), _running_job.end(), _priority) - _running_job.begin());
+			std::size_t lowest_priority_proc = (std::size_t) (std::find(_enabled_procs.begin(), _enabled_procs.end(), true) - _enabled_procs.begin());
+			for(std::size_t p = lowest_priority_proc + 1; p < _num_procs; ++p){
+				if(proc_enabled(p) && _priority(_running_job[p], _running_job[lowest_priority_proc])){
+					lowest_priority_proc = p;
+				}
+			}
 			if(_priority(_running_job[lowest_priority_proc], _ready_jobs[SHARED_QUEUE].top())){
 				unassigned_higher_priority = true;
 				preempt(lowest_priority_proc, SHARED_QUEUE);
 			}
 		} while(unassigned_higher_priority && ! _ready_jobs[SHARED_QUEUE].empty());	
+	}
+}
+
+void GDMSimulator::time_step(unsigned t){
+	if(t == _feasibility_interval){
+		for(std::size_t i = 0; i < _num_procs; ++i){
+			disable_proc(i);
+		}
 	}
 }
 
