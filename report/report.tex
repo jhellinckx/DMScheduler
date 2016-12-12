@@ -10,6 +10,7 @@
 \usepackage{url}
 \usepackage{listings}
 \usepackage{color}
+\usepackage{amsmath,amsfonts,amsthm}
 \usepackage[toc,page]{appendix}
 
 \title{INFO-F404 - Real-Time Operating Systems\\Project 1: Global vs Partitioned DM}
@@ -39,14 +40,34 @@ Three executables were asked in order to complete this project:
 \subsection{Simulator}
 
 \subsection{Generator}
+\label{gendesc}
+These are the primary constraints for tasks creation:
+\begin{itemize}
+  \item there should be exactly $n$ tasks;
+  \item the system utilisation should be very close to $u$
+  \item each generated tasks $\tau_i$ should have $0 <= u_i <= 1$
+  \item $\forall \tau_i. t_i \geq d_i \geq c_i$
+\end{itemize}
+
+The code is really simple: you just generate $n$ numbers between 0 and 1, those numbers are then multiplied by the expected system utilisation $u$ and divided by their sum: those numbers are now the $u_i$ for each created tasks.
+We then convert $u_i$ to fraction: the numerator will become the $c_i$ and the denominator, the $t_i$. Now we can generate a $d_i$ which is a random number from an uniform integer distribution between $c_i$ and $t_i$.
+
+All $o_i$ can be generated randomly, we will just substract each of them by the minimal $o_i$ so the minimal will be 0.
 
 \subsection{Study}
 
-\section{Encoutered problems}
+\section{Encoutered problems and solutions}
 
 \subsection{Simulator}
 
 \subsection{Generator}
+There could be problems in asked conditions: if the asked $u$ is bigger than $100 * n$, clearly it is impossible to generate $n$ tasks with $0 < u_i \leq 1$. If this case happen, $u$ is simply decreased to $100 * n$.
+
+Contrarilly to what is stated in \ref{gendesc}, generating the first numbers between 0 and 1 is a bad idea.
+If we take an extreme case where it is asked to take $n$ jobs with a system utilisation $u = 100 * n$, it is logical that each task utilisation $\tau_u = 100$.
+We thus have to reduce the interval were the random numbers are taken.
+We can handle this by reducing this interval: we take $[m - s; m + s]$ where $m = u / n$ and $s = \text{min}(m, 1-m)$.
+
 
 \subsection{Study}
 
