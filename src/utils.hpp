@@ -4,6 +4,9 @@
 #include <iostream>
 #include <vector>
 
+#include "task.hpp"
+#include "simulator.hpp"
+
 template<typename T>
 std::ostream& operator<<(std::ostream& out, const std::vector<T>& vec){
 	for(const T& t: vec){
@@ -13,7 +16,6 @@ std::ostream& operator<<(std::ostream& out, const std::vector<T>& vec){
 }	
 
 namespace utils{
-	
 }
 
 

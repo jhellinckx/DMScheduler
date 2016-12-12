@@ -18,7 +18,7 @@ bool Job::missed(unsigned t) const {
 }
 
 std::ostream& operator<<(std::ostream& out, const Job& job){
-	out << "ID(" << job.task_id << ")" << " D(" << job.d << ")" << " D_rel(" << job.d_rel << ")" << " C(" << job.c << ")" << std::endl;
+	out << "ID(" << job.task_id << ")" << " D(" << job.d << ")" << " D_rel(" << job.d_rel << ")" << " C(" << job.c << ")";
 	out << "Execs : ";
 	for(const unsigned& exec: job.executions) { out << exec << " "; }
 	return out;
