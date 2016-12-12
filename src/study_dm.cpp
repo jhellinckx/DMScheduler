@@ -1,17 +1,61 @@
 #include <utility>
 #include <tuple>
 #include <vector>
+#include <sstream>
+#include <cstdlib>
+#include <cctype>
+#include <unistd.h>
+#include <math.h>
 
 #include "generator.hpp"
 #include "task.hpp"
 #include "simulator.hpp"
 #include "utils.hpp"
 
+const std::string PYTHON_COMMAND = "python";
+const std::string PYTHON_PLOTTER_FILENAME = "plotter.py";
 const std::size_t SAMPLE_SIZE_PER_VALUE = 10;
 
-void prettify_plot(std::vector<double> xs, std::vector<double> ys){
-
+void stream_double_list(std::stringstream& ss, const std::vector<double>& vec){
+	ss << "\"[";
+	for(std::size_t i = 0; i < vec.size(); ++i){
+		if(isnan(vec[i])) {
+			ss << "\'nan\'";
+		}
+		else{
+			ss << vec[i];
+		}
+		if(i < vec.size() - 1){ ss << ","; }
+	}
+	ss << "]\"";
 }
+
+void prettify_plot(const std::vector<double>& xs, const std::vector<double>& ys1, const std::vector<double>& ys2){
+	std::stringstream ss;
+	ss << PYTHON_COMMAND << " " << PYTHON_PLOTTER_FILENAME << " ";
+	stream_double_list(ss, xs);
+	ss << " ";
+	stream_double_list(ss, ys1);
+	ss << " ";
+	stream_double_list(ss, ys2);
+	ss << " a b c fig.png";
+	
+	pid_t pid = fork();
+    if(pid < 0){
+        throw std::runtime_error("Failed to execute plotting command");
+    }
+    else if (pid == 0){
+        if(system(NULL)){
+            system(ss.str().c_str());
+            _Exit(EXIT_SUCCESS);
+        }
+        else{
+            _Exit(EXIT_FAILURE);
+        }
+    }
+}
+
+
 
 std::tuple<double, double, double, double, double, double, double, double> average_values(Generator gen, unsigned num_procs){
 	double tot_load_part = 0.0;
@@ -90,6 +134,8 @@ void compare_util(){
 		utils[i] = u;
 		++i;
 	}
+
+	prettify_plot(utils, part_loads, global_loads);
 }
 
 void compare_num_tasks(){
@@ -121,5 +167,5 @@ void compare_num_tasks(){
 
 int main(){
 	compare_util();
-	compare_num_tasks();
+	//compare_num_tasks();
 }
