@@ -8,6 +8,7 @@
 #include <cctype>
 #include <unistd.h>
 #include <sstream>
+#include <utility>
 #include <stack>
 
 #include "task.hpp"
@@ -20,6 +21,8 @@
 #define IDLE_EXEC -1
 #define PYTHON_PRETTIFIER_FILENAME "prettify_schedule.py"
 #define SHARED_QUEUE 0
+
+#define EXP_BASE 2
 
 template<typename PriorityComp>
 PCDSimulator<PriorityComp>::PCDSimulator(const std::vector<Task>& tasks, std::size_t num_procs, std::size_t num_queues) : 
@@ -152,7 +155,7 @@ bool PCDSimulator<PriorityComp>::run(){
 	while(std::any_of(_enabled_procs.begin(), _enabled_procs.end(), [](bool enabled){ return enabled; })){
 		incoming_jobs(t);
 		schedule();
-		for(std::size_t p = 0; p < _num_procs; ++p){ if(proc_enabled(p)){ execute_job(t, p); }}
+		for(std::size_t p = 0; p < _num_procs; ++p){ execute_job(t, p); }
 		if(check_deadlines(t) == DEADLINES_NOT_OK){
 			_t_reached = t;
 			_schedulable = false;
@@ -162,11 +165,6 @@ bool PCDSimulator<PriorityComp>::run(){
 		++t;
 	}
 	return _schedulable;
-}
-
-template<typename PriorityComp>
-unsigned PCDSimulator<PriorityComp>::time_enabled(std::size_t p) const{
-	return (unsigned) (_executions[p].size() - 1);
 }
 
 template<typename PriorityComp>
@@ -448,6 +446,49 @@ void GDMSimulator::time_step(unsigned t){
 	}
 }
 
+
+unsigned PDMSimulator::min_partitions(const std::vector<Task>& tasks, unsigned base){
+	unsigned partitions = (base == 0) ? 1 : base * EXP_BASE;
+	PDMSimulator sim{tasks, base};
+	while(! (sim = PDMSimulator(tasks, partitions)).partitionable()){
+		partitions *= EXP_BASE;
+	}
+	return sim.partitions_used();
+}
+
+unsigned GDMSimulator::bs_min_procs(const std::vector<Task>& tasks, const std::pair<unsigned, unsigned>& range){
+	if(range.first == range.second) { return range.first; }
+	unsigned mid = ((unsigned) std::floor((range.second - range.first) / 2.0)) + range.first;
+	if(GDMSimulator(tasks, mid).run()){
+		return bs_min_procs(tasks, std::make_pair(range.first, mid));
+	}
+	else{
+		return bs_min_procs(tasks, std::make_pair(mid + 1, range.second));
+	}
+}
+
+unsigned GDMSimulator::min_procs(const std::vector<Task>& tasks, const unsigned base, bool schedulable){
+	unsigned schedulable_procs = base;
+	if(! schedulable){
+		schedulable_procs = (base == 0) ? 1 : base * EXP_BASE;
+		while(! GDMSimulator(tasks, schedulable_procs).run()){
+			schedulable_procs *= EXP_BASE;
+		}
+	}
+	return bs_min_procs(tasks, std::make_pair(1, schedulable_procs));
+}
+
+unsigned GDMSimulator::min_procs(const std::vector<Task>& tasks, const unsigned base){
+	return min_procs(tasks, base, GDMSimulator(tasks, base).run());
+}
+
+unsigned PDMSimulator::study_interval(std::size_t p) const {
+	return _feasibility_intervals[p];
+}
+
+unsigned GDMSimulator::study_interval(std::size_t p) const {
+	return _feasibility_interval;
+}
 
 
 

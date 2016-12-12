@@ -10,6 +10,7 @@
 #include <sstream>
 #include <numeric>
 #include <map>
+#include <utility>
 
 template<typename PriorityComp>
 class PCDSimulator{
@@ -61,7 +62,6 @@ public:
 	virtual std::string stringify_simulation();
 	virtual std::string stringify_missed_deadline();
 	virtual void prettify_simulation(const std::string& filename);
-	virtual unsigned time_enabled(std::size_t p) const;
 	virtual unsigned procs_used() const;
 	virtual std::vector<unsigned> idle_time() const;
 	virtual unsigned tot_idle_time() const;
@@ -69,6 +69,8 @@ public:
 	virtual unsigned tot_preemptions() const;
 	virtual std::vector<double> utilization() const;
 	virtual double tot_utilization() const;
+
+	virtual unsigned study_interval(std::size_t p) const = 0;
 	virtual ~PCDSimulator(){}
 };
 
@@ -95,11 +97,11 @@ protected:
 public:
 	PDMSimulator(const std::vector<Task>& tasks, unsigned partitions);
 	std::string stringify_partitions();
-
 	unsigned partitions_used() const;
-
+	static unsigned min_partitions(const std::vector<Task>& tasks, unsigned base);
 	bool partitionable() const { return _partitionable; }
 	virtual bool run();
+	virtual unsigned study_interval(std::size_t p) const;
 	virtual ~PDMSimulator() {}
 };
 
@@ -114,7 +116,10 @@ protected:
 
 public:
 	GDMSimulator(const std::vector<Task>& tasks, unsigned procs);
-
+	static unsigned min_procs(const std::vector<Task>& tasks, const unsigned base, bool schedulable);
+	static unsigned min_procs(const std::vector<Task>& tasks, const unsigned base);
+	static unsigned bs_min_procs(const std::vector<Task>& tasks, const std::pair<unsigned, unsigned>& range);
+	virtual unsigned study_interval(std::size_t p) const;
 	virtual ~GDMSimulator() {}
 
 };

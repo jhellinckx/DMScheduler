@@ -22,6 +22,7 @@ int main(int argc, char* argv[]){
   }
 
   Generator g(u_goal, n, (int)time(0));
+  g.create_tasks();
   std::cout << "Utilisation = " << g.u() * 100 << std::endl;
   std::ofstream out;
   out.open(out_file);

@@ -7,11 +7,12 @@
 #include <iostream>
 #include <algorithm>
 #include <random>
+#include <ctime>
 
 #define UNI_UPPER_LIMIT 100
 #define O_UPPER_LIMIT 100
 #define O_LOWER_LIMIT 0
-#define PRECISION 1000.0
+#define PRECISION 200.0
 
 int Generator::rand_between(int lower, int upper){
   std::uniform_int_distribution<unsigned> uni(lower, upper);
@@ -25,8 +26,10 @@ unsigned gcd(unsigned a, unsigned b) {
 void set_c_and_t(double d, Task& t){
   d = round((d - std::floor(d)) * PRECISION);
   const double r = gcd((unsigned)round(d), PRECISION);
-  t.t = (unsigned)(PRECISION / r);
-  t.c = (unsigned)(d / r);
+  unsigned maybe_t = (unsigned)(PRECISION / r);
+  unsigned maybe_c = (unsigned)(d / r);
+  t.t = (maybe_t <= 1) ? 2 : maybe_t;
+  t.c = (maybe_c == 0) ? 1 : maybe_c;
 }
 
 Generator::Generator(double u, int n, int seed)
@@ -35,10 +38,11 @@ Generator::Generator(double u, int n, int seed)
     std::cout << "Warning: cannot satisfy conditions -> setting u to 100 * n..." << std::endl;
     utilisation_goal = n;
   }
-  create_jobs();
 }
 
-void Generator::create_jobs(){
+Generator::Generator(double u, int n) : Generator(u, n, (int) time(0)) {}
+
+std::vector<Task> Generator::create_tasks(){
   Task t;
   const double mean = utilisation_goal / (double)n;
   const double dif = fmin(1-mean, mean);
@@ -50,29 +54,32 @@ void Generator::create_jobs(){
   }
   double s = std::accumulate(us.begin(), us.end(), 0.0);
   if (s == n){
-    create_dumb();
-    return;
+    return create_dumb();
   }
   for(auto it = us.begin(); it != us.end(); ++it){
     *it = utilisation_goal * *it / s;
   }
+  unsigned id = 1;
   for (size_t i = 0; i < (unsigned)n; ++i) {
     set_c_and_t(us[i], t);
-    t.d = rand_between(t.c, t.t);
+    t.d = rand_between(t.c+1, t.t);
     t.o = rand_between(O_LOWER_LIMIT, O_UPPER_LIMIT);
     t.u = (double)t.c / t.t;
+    t.id = id++;
     tasks[i] = t;
   }
   o_shift();
+  return tasks;
 }
 
-void Generator::create_dumb(){
+std::vector<Task> Generator::create_dumb(){
   std::uniform_int_distribution<unsigned> uni(1, UNI_UPPER_LIMIT);
   for (size_t i = 0; i < (unsigned)n; ++i) {
     unsigned r = uni(gen);
     tasks[i] = Task(uni(gen), r, r, r);
   }
   o_shift();
+  return tasks;
 }
 
 void Generator::o_shift(){

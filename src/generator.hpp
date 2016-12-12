@@ -14,11 +14,12 @@ class Generator {
 public:
   Generator() = default;
   Generator(double u, int n, int seed);
+  Generator(double u, int n);
   std::string pprint() const;
+  std::vector<Task> create_tasks();
 
 private:
-  void create_jobs();
-  void create_dumb();
+  std::vector<Task> create_dumb();
   void o_shift();
   int rand_between(int lower, int upper);
 
