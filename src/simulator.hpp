@@ -32,6 +32,8 @@ protected:
 	unsigned _t_reached;
 	std::vector<std::vector<int>> _executions;
 	std::vector<unsigned> _preemptions;
+	unsigned _fail_t;
+	unsigned _fail_id;
 
 	PCDSimulator(const std::vector<Task>& tasks, std::size_t p, std::size_t q);
 	void execute_job(unsigned t, std::size_t p);
@@ -57,7 +59,9 @@ public:
 	virtual bool run();
 	virtual bool schedulable() const { return _schedulable; }
 	virtual std::string stringify_simulation();
+	virtual std::string stringify_missed_deadline();
 	virtual void prettify_simulation(const std::string& filename);
+	virtual unsigned time_enabled(std::size_t p) const;
 	virtual unsigned procs_used() const;
 	virtual std::vector<unsigned> idle_time() const;
 	virtual unsigned tot_idle_time() const;

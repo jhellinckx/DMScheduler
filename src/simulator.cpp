@@ -84,7 +84,14 @@ void PCDSimulator<PriorityComp>::preempt(std::size_t p, std::size_t q){
 template<typename PriorityComp>
 bool PCDSimulator<PriorityComp>::check_deadlines(unsigned t){
 	return (std::any_of(_current_jobs.begin(), _current_jobs.end(), 
-		[t](const Job& job){ return job.missed(t); })) ? DEADLINES_NOT_OK : DEADLINES_OK;
+		[t, this](const Job& job){ 
+			if(job.missed(t)){
+				_fail_t = t;
+				_fail_id = job.task_id;
+				return true;
+			}
+			return false;
+		})) ? DEADLINES_NOT_OK : DEADLINES_OK;
 }
 
 template<typename PriorityComp>
@@ -155,6 +162,11 @@ bool PCDSimulator<PriorityComp>::run(){
 		++t;
 	}
 	return _schedulable;
+}
+
+template<typename PriorityComp>
+unsigned PCDSimulator<PriorityComp>::time_enabled(std::size_t p) const{
+	return (unsigned) (_executions[p].size() - 1);
 }
 
 template<typename PriorityComp>
@@ -237,6 +249,14 @@ std::string PCDSimulator<PriorityComp>::stringify_simulation() {
 	for(const Job& job : _completed_jobs){
 		ss << job << std::endl;
 	}
+	return ss.str();
+}
+
+template<typename PriorityComp>
+std::string PCDSimulator<PriorityComp>::stringify_missed_deadline() {
+	std::stringstream ss;
+	ss 	<< "Missed deadline for job of task " << _fail_id << " at time " 
+		<< _fail_t << ".";
 	return ss.str();
 }
 
@@ -363,9 +383,10 @@ bool PDMSimulator::run(){
 
 std::string PDMSimulator::stringify_partitions() {
 	std::stringstream ss;
+	unsigned p = 1;
 	for(const std::vector<Task>& tasks : _partitioning){
 		double acc_u = 0.0;
-		ss << "Partition : ";
+		ss << "Partition " << p++ << " : ";
 		for(const Task& task : tasks){
 			ss << task << " / ";
 			acc_u += task.u;
