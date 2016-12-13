@@ -315,9 +315,9 @@ PDMSimulator::PDMSimulator(const std::vector<Task>& tasks, unsigned partitions) 
 					max_fi = _feasibility_intervals[partition];
 				}
 			}
-			for(unsigned partition = 0; partition < partitions; ++partition){
-				if(_feasibility_intervals[partition] == 0) { _feasibility_intervals[partition] = max_fi; }
-			}
+			// for(unsigned partition = 0; partition < partitions; ++partition){
+			// 	if(_feasibility_intervals[partition] == 0) { _feasibility_intervals[partition] = max_fi; }
+			// }
 		}
 	}
 

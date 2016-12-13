@@ -149,9 +149,9 @@ void compare_util(){
 
 void compare_num_tasks(){
 	// Compare load, required number of procs and schedulability depending on the number of tasks with fixed and minimum proc numbers and the strategy
-	const double utilization = 70;
+	const double utilization = 200;
 	const unsigned num_procs = 4;
-	const unsigned lower_num_tasks = 1;
+	const unsigned lower_num_tasks = 2;
 	const unsigned upper_num_tasks = 30;
 	const double n_step = 1;
 
